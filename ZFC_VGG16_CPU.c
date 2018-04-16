@@ -11,8 +11,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <time.h>
+#include <sys/time.h>
 #include <omp.h>
+#include <string.h>
+#include <ctype.h>
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS 1
@@ -708,12 +710,12 @@ void output_predictions(FILE *out, int only_convolution) {
 	int i;
 	if (only_convolution == 1) {
 		for (i = 0; i < 512*7*7; i++) {
-			fprintf(out, "%g ", mem_block1_dense[i]);
+			fprintf(out, "%g\n", mem_block1_dense[i]);
 		}
 	}
 	else {
 		for (i = 0; i < dshape[2][1]; i++) {
-			fprintf(out, "%g ", mem_block2_dense[i]);
+			fprintf(out, "%g\n", mem_block2_dense[i]);
 		}
 	}
 	fprintf(out, "\n");
@@ -815,4 +817,5 @@ int main(int argc, char *argv[]) {
 	fclose(file_list);
 	return 0;
 }
+
 
