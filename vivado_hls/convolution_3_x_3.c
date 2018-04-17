@@ -1,6 +1,6 @@
 #include "vgg16.h"
 
-void convolution_3_x_3(float **matrix, float **kernel, float **out, int size) {
+void convolution_3_x_3(float matrix[SIZE][SIZE], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE][SIZE], int size) {
 	int i, j;
 	float sum;
 	float zeropad[SIZE + 2][SIZE + 2] = { 0.0 };

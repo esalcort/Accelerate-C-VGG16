@@ -37,7 +37,8 @@ int numthreads;
 
 
 // Weights and image block START
-float ***image;
+// float ***image;
+float image[3][SIZE][SIZE];
 int cshape[13][4] = { 
 	{ 64, 3, CONV_SIZE, CONV_SIZE },
 	{ 64, 64, CONV_SIZE, CONV_SIZE },
@@ -53,7 +54,8 @@ int cshape[13][4] = {
 	{ 512, 512, CONV_SIZE, CONV_SIZE },
 	{ 512, 512, CONV_SIZE, CONV_SIZE }
 };
-float *****wc;
+// float *****wc;
+float wc[13][512][512][CONV_SIZE][CONV_SIZE];
 float **bc;
 int dshape[3][2] = {
 	{ 25088, 4096 },
@@ -66,8 +68,11 @@ float **bd;
 
 // Blocks for intermediate convolutions
 int mem_block_shape[3] = {512, SIZE, SIZE};
-float ***mem_block1;
-float ***mem_block2;
+// float ***mem_block1;
+// float ***mem_block2;
+float mem_block1[512][SIZE][SIZE];
+float mem_block2[512][SIZE][SIZE];
+
 // Blocks for dense flatten layers
 int mem_block_dense_shape = { 512 * 7 * 7 };
 float *mem_block1_dense;
@@ -76,7 +81,7 @@ float *mem_block2_dense;
 // Weights and image block END
 
 
-void reset_mem_block(float ***mem) {
+void reset_mem_block(float mem[512][SIZE][SIZE]) {
 	int i, j, k;
 	for (i = 0; i < mem_block_shape[0]; i++) {
 		for (j = 0; j < mem_block_shape[1]; j++) {
@@ -100,28 +105,28 @@ void init_memory() {
 	int i, j, k, l;
 
 	// Init image memory
-	image = malloc(3 * sizeof(float**));
-	for (i = 0; i < 3; i++) {
-		image[i] = malloc(SIZE * sizeof(float*));
-		for (j = 0; j < SIZE; j++) {
-			image[i][j] = malloc(SIZE * sizeof(float));
-		}
-	}
+	// image = malloc(3 * sizeof(float**));
+	// for (i = 0; i < 3; i++) {
+	// 	image[i] = malloc(SIZE * sizeof(float*));
+	// 	for (j = 0; j < SIZE; j++) {
+	// 		image[i][j] = malloc(SIZE * sizeof(float));
+	// 	}
+	// }
 
 	// Init convolution weights
-	wc = malloc(13 * sizeof(float****));
+	// wc = malloc(13 * sizeof(float****));
 	bc = malloc(13 * sizeof(float*));
 	for (l = 0; l < 13; l++) {
-		wc[l] = malloc(cshape[l][0] * sizeof(float***));
-		for (i = 0; i < cshape[l][0]; i++) {
-			wc[l][i] = malloc(cshape[l][1] * sizeof(float**));
-			for (j = 0; j < cshape[l][1]; j++) {
-				wc[l][i][j] = malloc(cshape[l][2] * sizeof(float*));
-				for (k = 0; k < cshape[l][2]; k++) {
-					wc[l][i][j][k] = malloc(cshape[l][3] * sizeof(float));
-				}
-			}
-		}
+		// wc[l] = malloc(cshape[l][0] * sizeof(float***));
+		// for (i = 0; i < cshape[l][0]; i++) {
+		// 	wc[l][i] = malloc(cshape[l][1] * sizeof(float**));
+		// 	for (j = 0; j < cshape[l][1]; j++) {
+		// 		wc[l][i][j] = malloc(cshape[l][2] * sizeof(float*));
+		// 		for (k = 0; k < cshape[l][2]; k++) {
+		// 			wc[l][i][j][k] = malloc(cshape[l][3] * sizeof(float));
+		// 		}
+		// 	}
+		// }
 		bc[l] = malloc(cshape[l][0] * sizeof(float));
 	}
 
@@ -137,16 +142,16 @@ void init_memory() {
 	}
 
 	// Init mem_blocks
-	mem_block1 = malloc(mem_block_shape[0] * sizeof(float**));
-	mem_block2 = malloc(mem_block_shape[0] * sizeof(float**));
-	for (i = 0; i < mem_block_shape[0]; i++) {
-		mem_block1[i] = malloc(mem_block_shape[1] * sizeof(float*));
-		mem_block2[i] = malloc(mem_block_shape[1] * sizeof(float*));
-		for (j = 0; j < mem_block_shape[1]; j++) {
-			mem_block1[i][j] = malloc(mem_block_shape[2] * sizeof(float));
-			mem_block2[i][j] = malloc(mem_block_shape[2] * sizeof(float));
-		}
-	}
+	// mem_block1 = malloc(mem_block_shape[0] * sizeof(float**));
+	// mem_block2 = malloc(mem_block_shape[0] * sizeof(float**));
+	// for (i = 0; i < mem_block_shape[0]; i++) {
+	// 	mem_block1[i] = malloc(mem_block_shape[1] * sizeof(float*));
+	// 	mem_block2[i] = malloc(mem_block_shape[1] * sizeof(float*));
+	// 	for (j = 0; j < mem_block_shape[1]; j++) {
+	// 		mem_block1[i][j] = malloc(mem_block_shape[2] * sizeof(float));
+	// 		mem_block2[i][j] = malloc(mem_block_shape[2] * sizeof(float));
+	// 	}
+	// }
 	reset_mem_block(mem_block1);
 	reset_mem_block(mem_block2);
 
@@ -160,29 +165,29 @@ void free_memory() {
 	int i, j, k, l;
 
 	// Free image memory
-	for (i = 0; i < 3; i++) {
-		for (j = 0; j < SIZE; j++) {
-			free(image[i][j]);
-		}
-		free(image[i]);
-	}
-	free(image);
+	// for (i = 0; i < 3; i++) {
+	// 	for (j = 0; j < SIZE; j++) {
+	// 		free(image[i][j]);
+	// 	}
+	// 	free(image[i]);
+	// }
+	// free(image);
 
 	// Free convolution weights
 	for (l = 0; l < 13; l++) {
-		for (i = 0; i < cshape[l][0]; i++) {
-			for (j = 0; j < cshape[l][1]; j++) {
-				for (k = 0; k < cshape[l][2]; k++) {
-					free(wc[l][i][j][k]);
-				}
-				free(wc[l][i][j]);
-			}
-			free(wc[l][i]);
-		}
-		free(wc[l]);
+		// for (i = 0; i < cshape[l][0]; i++) {
+		// 	for (j = 0; j < cshape[l][1]; j++) {
+		// 		for (k = 0; k < cshape[l][2]; k++) {
+		// 			free(wc[l][i][j][k]);
+		// 		}
+		// 		free(wc[l][i][j]);
+		// 	}
+		// 	free(wc[l][i]);
+		// }
+		// free(wc[l]);
 		free(bc[l]);
 	}
-	free(wc);
+	// free(wc);
 	free(bc);
 
 	// Free dense weights
@@ -197,16 +202,16 @@ void free_memory() {
 	free(bd);
 
 	// Free memblocks
-	for (i = 0; i < mem_block_shape[0]; i++) {
-		for (j = 0; j < mem_block_shape[1]; j++) {
-			free(mem_block1[i][j]);
-			free(mem_block2[i][j]);
-		}
-		free(mem_block1[i]);
-		free(mem_block2[i]);
-	}
-	free(mem_block1);
-	free(mem_block2);
+	// for (i = 0; i < mem_block_shape[0]; i++) {
+	// 	for (j = 0; j < mem_block_shape[1]; j++) {
+	// 		free(mem_block1[i][j]);
+	// 		free(mem_block2[i][j]);
+	// 	}
+	// 	free(mem_block1[i]);
+	// 	free(mem_block2[i]);
+	// }
+	// free(mem_block1);
+	// free(mem_block2);
 
 	free(mem_block1_dense);
 	free(mem_block2_dense);
@@ -306,7 +311,7 @@ void normalize_image() {
 }
 
 
-void add_bias_and_relu(float **out, float bs, int size) {
+void add_bias_and_relu(float out[SIZE][SIZE], float bs, int size) {
 	int i, j;
 
 	for (i = 0; i < size; i++) {
@@ -346,7 +351,7 @@ float max_of_4(float a, float b, float c, float d) {
 }
 
 
-void maxpooling(float **out, int size) {
+void maxpooling(float out[SIZE][SIZE], int size) {
 	int i, j;
 	for (i = 0; i < size; i+=2) {
 		for (j = 0; j < size; j+=2) {
@@ -356,7 +361,7 @@ void maxpooling(float **out, int size) {
 }
 
 
-void flatten(float ***in, float *out, int sh0, int sh1, int sh2) {
+void flatten(float in[512][SIZE][SIZE], float *out, int sh0, int sh1, int sh2) {
 	int i, j, k, total = 0;
 	for (i = 0; i < sh0; i++) {
 		for (j = 0; j < sh1; j++) {
