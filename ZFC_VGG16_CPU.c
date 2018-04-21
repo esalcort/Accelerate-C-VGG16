@@ -56,6 +56,7 @@ int cshape[13][4] = {
 	{ 512, 512, CONV_SIZE, CONV_SIZE }
 };
 float *****wc;
+FILE *weights_file_ptr;
 float **bc;
 int dshape[3][2] = {
 	{ 25088, 4096 },
@@ -218,8 +219,68 @@ void free_memory() {
 	free(mem_block2_dense);
 }
 
+FILE* get_weights_ptr(char *in_file) {
+	FILE *iin = fopen(in_file, "r");
+	if (iin == NULL) {
+		printf("File %s absent\n", in_file);
+		exit(1);
+	}
+	return iin;
+}
 
-void read_weights(char *in_file, int lvls) {
+void read_level_weights(int level) {
+	float dval;
+	int i, j, k, l, z;
+	static int next_level = 0;
+	if (next_level != level) {
+		printf("Program error, wrong weights level\n");
+		exit(1);
+	}
+	
+	// Reading convolution weights (store them flipped from begining)
+	z = level;
+	printf("Read conv block %d weights\n", z);
+	for (i = 0; i < cshape[z][0]; i++) {
+		for (j = 0; j < cshape[z][1]; j++) {
+			for (k = 0; k < cshape[z][2]; k++) {
+				for (l = 0; l < cshape[z][3]; l++) {
+					fscanf(weights_file_ptr, "%f", &dval);
+					wc[z][i][j][CONV_SIZE - k - 1][CONV_SIZE - l - 1] = dval;
+				}
+			}
+		}
+	}
+	for (i = 0; i < cshape[z][0]; i++) {
+		fscanf(weights_file_ptr, "%f", &dval);
+		bc[z][i] = dval;
+	}
+	next_level++;
+}
+
+void read_dense_weights() {
+	float dval;
+	int i, j, z;
+	int total_lvls_read = 0;
+	
+	// Reading dense weights
+	for (z = 0; z < 3; z++) {
+		printf("Read dense block %d weights\n", z);
+		for (i = 0; i < dshape[z][0]; i++) {
+			for (j = 0; j < dshape[z][1]; j++) {
+				fscanf(weights_file_ptr, "%f", &dval);
+				wd[z][i][j] = dval;
+			}
+		}
+		for (i = 0; i < dshape[z][1]; i++) {
+			fscanf(weights_file_ptr, "%f", &dval);
+			bd[z][i] = dval;
+		}
+	}
+
+	fclose(weights_file_ptr);
+}
+
+/*void read_weights(char *in_file, int lvls) {
 	float dval;
 	int i, j, k, l, z;
 	FILE *iin;
@@ -272,7 +333,7 @@ void read_weights(char *in_file, int lvls) {
 	}
 
 	fclose(iin);
-}
+}*/
 
 
 void read_image(char *in_file) {
@@ -506,6 +567,7 @@ void get_VGG16_predict(int only_convolution) {
 	// Layer 1 (Convolution 3 -> 64)
 	level = 0;
 	cur_size = SIZE;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -517,6 +579,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 2 (Convolution 64 -> 64)
 	level = 1;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -535,6 +598,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 4 (Convolution 64 -> 128)
 	level = 2;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -546,6 +610,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 5 (Convolution 128 -> 128)
 	level = 3;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -564,6 +629,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 7 (Convolution 128 -> 256)
 	level = 4;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -575,6 +641,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 8 (Convolution 256 -> 256)
 	level = 5;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -586,6 +653,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 9 (Convolution 256 -> 256)
 	level = 6;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -604,6 +672,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 11 (Convolution 256 -> 512)
 	level = 7;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -615,6 +684,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 12 (Convolution 512 -> 512)
 	level = 8;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -626,6 +696,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 13 (Convolution 512 -> 512)
 	level = 9;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -644,6 +715,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 15 (Convolution 512 -> 512)
 	level = 10;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -655,6 +727,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 16 (Convolution 512 -> 512)
 	level = 11;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -666,6 +739,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 17 (Convolution 512 -> 512)
 	level = 12;
+	read_level_weights(level);
 	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		for (j = 0; j < cshape[level][1]; j++) {
@@ -688,6 +762,7 @@ void get_VGG16_predict(int only_convolution) {
 		return;
 	}
 
+	read_dense_weights();
 	// Layer 20 (Dense)
 	level = 0;
 	dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
@@ -796,7 +871,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	gettimeofday(&timeStart, NULL);
-	read_weights(weights_file, lvls);
+	// read_weights(weights_file, lvls);
+	weights_file_ptr = get_weights_ptr(weights_file);
 	gettimeofday(&timeEnd, NULL);
 	deltaTime = get_seconds(timeStart, timeEnd);
 	printf("Reading weights: %.3lf sec\n", deltaTime);
