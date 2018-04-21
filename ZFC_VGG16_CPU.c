@@ -97,10 +97,8 @@ void reset_mem_block_dense(float *mem) {
 	}
 }
 
-
-void init_memory() {
-	int i, j, k, l;
-
+void init_image() {
+	int i, j;
 	// Init image memory
 	image = malloc(3 * sizeof(float**));
 	for (i = 0; i < 3; i++) {
@@ -109,6 +107,10 @@ void init_memory() {
 			image[i][j] = malloc(SIZE * sizeof(float));
 		}
 	}
+}
+
+void init_memory() {
+	int i, j, k, l;
 
 	// Init convolution weights
 	wc = malloc(13 * sizeof(float****));
@@ -157,10 +159,8 @@ void init_memory() {
 	mem_block2_dense = calloc(mem_block_dense_shape, sizeof(float));
 }
 
-
-void free_memory() {
-	int i, j, k, l;
-
+void free_image() {
+	int i, j;
 	// Free image memory
 	for (i = 0; i < 3; i++) {
 		for (j = 0; j < SIZE; j++) {
@@ -169,6 +169,10 @@ void free_memory() {
 		free(image[i]);
 	}
 	free(image);
+}
+
+void free_memory() {
+	int i, j, k, l;
 
 	// Free convolution weights
 	for (l = 0; l < 13; l++) {
@@ -509,6 +513,7 @@ void get_VGG16_predict(int only_convolution) {
 		}
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
 	}
+	free_image();
 	
 	// Layer 2 (Convolution 64 -> 64)
 	level = 1;
@@ -803,6 +808,7 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 		printf("%d\n", strlen(buf));
+		init_image();
 		read_image(trimwhitespace(buf));
 		normalize_image();
 		// dump_image();
