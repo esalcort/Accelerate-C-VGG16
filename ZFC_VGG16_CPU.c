@@ -110,36 +110,43 @@ void init_image() {
 	}
 }
 
+void init_conv_weights_level(int level) {
+	int i, j, k, l;
+	l = level;
+	wc[l] = malloc(cshape[l][0] * sizeof(float***));
+	for (i = 0; i < cshape[l][0]; i++) {
+		wc[l][i] = malloc(cshape[l][1] * sizeof(float**));
+		for (j = 0; j < cshape[l][1]; j++) {
+			wc[l][i][j] = malloc(cshape[l][2] * sizeof(float*));
+			for (k = 0; k < cshape[l][2]; k++) {
+				wc[l][i][j][k] = malloc(cshape[l][3] * sizeof(float));
+			}
+		}
+	}
+	bc[l] = malloc(cshape[l][0] * sizeof(float));
+}
+
+void init_dense_weights_level(int level) {
+	int l, i;
+	l = level;
+	wd[l] = malloc(dshape[l][0] * sizeof(float*));
+	for (i = 0; i < dshape[l][0]; i++) {
+		wd[l][i] = malloc(dshape[l][1] * sizeof(float));
+	}
+	bd[l] = malloc(dshape[l][1] * sizeof(float));
+}
+
 void init_memory() {
 	int i, j, k, l;
 
 	// Init convolution weights
 	wc = malloc(13 * sizeof(float****));
 	bc = malloc(13 * sizeof(float*));
-	for (l = 0; l < 13; l++) {
-		wc[l] = malloc(cshape[l][0] * sizeof(float***));
-		for (i = 0; i < cshape[l][0]; i++) {
-			wc[l][i] = malloc(cshape[l][1] * sizeof(float**));
-			for (j = 0; j < cshape[l][1]; j++) {
-				wc[l][i][j] = malloc(cshape[l][2] * sizeof(float*));
-				for (k = 0; k < cshape[l][2]; k++) {
-					wc[l][i][j][k] = malloc(cshape[l][3] * sizeof(float));
-				}
-			}
-		}
-		bc[l] = malloc(cshape[l][0] * sizeof(float));
-	}
+	
 
 	// Init dense weights
 	wd = malloc(3 * sizeof(float**));
 	bd = malloc(3 * sizeof(float*));
-	for (l = 0; l < 3; l++) {
-		wd[l] = malloc(dshape[l][0] * sizeof(float*));
-		for (i = 0; i < dshape[l][0]; i++) {
-			wd[l][i] = malloc(dshape[l][1] * sizeof(float));
-		}
-		bd[l] = malloc(dshape[l][1] * sizeof(float));
-	}
 
 	// Init mem_blocks
 	mem_block1 = malloc(mem_block_shape[0] * sizeof(float**));
@@ -172,34 +179,40 @@ void free_image() {
 	free(image);
 }
 
+void free_conv_weights_level(int level) {
+	int i, j, k, l;
+	l = level;
+	for (i = 0; i < cshape[l][0]; i++) {
+		for (j = 0; j < cshape[l][1]; j++) {
+			for (k = 0; k < cshape[l][2]; k++) {
+				free(wc[l][i][j][k]);
+			}
+			free(wc[l][i][j]);
+		}
+		free(wc[l][i]);
+	}
+	free(wc[l]);
+	free(bc[l]);
+}
+
+void free_dense_weights_level(int level) {
+	int l, i;
+	l = level;
+	for (i = 0; i < dshape[l][0]; i++) {
+		free(wd[l][i]);
+	}
+	free(wd[l]);
+	free(bd[l]);
+}
+
 void free_memory() {
 	int i, j, k, l;
 
 	// Free convolution weights
-	for (l = 0; l < 13; l++) {
-		for (i = 0; i < cshape[l][0]; i++) {
-			for (j = 0; j < cshape[l][1]; j++) {
-				for (k = 0; k < cshape[l][2]; k++) {
-					free(wc[l][i][j][k]);
-				}
-				free(wc[l][i][j]);
-			}
-			free(wc[l][i]);
-		}
-		free(wc[l]);
-		free(bc[l]);
-	}
 	free(wc);
 	free(bc);
 
 	// Free dense weights
-	for (l = 0; l < 3; l++) {
-		for (i = 0; i < dshape[l][0]; i++) {
-			free(wd[l][i]);
-		}
-		free(wd[l]);
-		free(bd[l]);
-	}
 	free(wd);
 	free(bd);
 
@@ -236,6 +249,12 @@ void read_level_weights(int level) {
 		printf("Program error, wrong weights level\n");
 		exit(1);
 	}
+	if (level != 0) {
+		// Free previous layer memory for weights
+		free_conv_weights_level(level - 1);
+	}
+	// Initialize memory weights of this layer
+	init_conv_weights_level(level);
 	
 	// Reading convolution weights (store them flipped from begining)
 	z = level;
@@ -257,84 +276,42 @@ void read_level_weights(int level) {
 	next_level++;
 }
 
-void read_dense_weights() {
+void read_dense_weights(int level) {
 	float dval;
 	int i, j, z;
-	int total_lvls_read = 0;
-	
-	// Reading dense weights
-	for (z = 0; z < 3; z++) {
-		printf("Read dense block %d weights\n", z);
-		for (i = 0; i < dshape[z][0]; i++) {
-			for (j = 0; j < dshape[z][1]; j++) {
-				fscanf(weights_file_ptr, "%f", &dval);
-				wd[z][i][j] = dval;
-			}
-		}
-		for (i = 0; i < dshape[z][1]; i++) {
-			fscanf(weights_file_ptr, "%f", &dval);
-			bd[z][i] = dval;
-		}
-	}
-
-	fclose(weights_file_ptr);
-}
-
-/*void read_weights(char *in_file, int lvls) {
-	float dval;
-	int i, j, k, l, z;
-	FILE *iin;
-	int total_lvls_read = 0;
-
-	iin = fopen(in_file, "r");
-	if (iin == NULL) {
-		printf("File %s absent\n", in_file);
+	static int next_level = 0;
+	if (next_level != level) {
+		printf("Program error, wrong DENSE weights level\n");
 		exit(1);
 	}
-	
-	// Reading convolution weights (store them flipped from begining)
-	for (z = 0; z < 13; z++) {
-		if (total_lvls_read >= lvls && lvls != -1)
-			break;
-		printf("Read conv block %d weights\n", z);
-		for (i = 0; i < cshape[z][0]; i++) {
-			for (j = 0; j < cshape[z][1]; j++) {
-				for (k = 0; k < cshape[z][2]; k++) {
-					for (l = 0; l < cshape[z][3]; l++) {
-						fscanf(iin, "%f", &dval);
-						wc[z][i][j][CONV_SIZE - k - 1][CONV_SIZE - l - 1] = dval;
-					}
-				}
-			}
-		}
-		for (i = 0; i < cshape[z][0]; i++) {
-			fscanf(iin, "%f", &dval);
-			bc[z][i] = dval;
-		}
-		total_lvls_read += 1;
+	if (level == 0) {
+		// Free last convolutional layer weights
+		free_conv_weights_level(12);
 	}
-
+	else {
+		// Free previous dense layer weights memory
+		free_dense_weights_level(level - 1);
+	}
+	init_dense_weights_level(level);
+	z = level;
 	// Reading dense weights
-	for (z = 0; z < 3; z++) {
-		if (total_lvls_read >= lvls && lvls != -1)
-			break;
-		printf("Read dense block %d weights\n", z);
-		for (i = 0; i < dshape[z][0]; i++) {
-			for (j = 0; j < dshape[z][1]; j++) {
-				fscanf(iin, "%f", &dval);
-				wd[z][i][j] = dval;
-			}
+	printf("Read dense block %d weights\n", z);
+	for (i = 0; i < dshape[z][0]; i++) {
+		for (j = 0; j < dshape[z][1]; j++) {
+			fscanf(weights_file_ptr, "%f", &dval);
+			wd[z][i][j] = dval;
 		}
-		for (i = 0; i < dshape[z][1]; i++) {
-			fscanf(iin, "%f", &dval);
-			bd[z][i] = dval;
-		}
-		total_lvls_read += 1;
 	}
-
-	fclose(iin);
-}*/
-
+	for (i = 0; i < dshape[z][1]; i++) {
+		fscanf(weights_file_ptr, "%f", &dval);
+		bd[z][i] = dval;
+	}
+	next_level++;
+	if (next_level >= 3) {
+		// Done reading weights, close file
+		fclose(weights_file_ptr);
+	}
+}
 
 void read_image(char *in_file) {
 	int i, j, l;
@@ -762,26 +739,30 @@ void get_VGG16_predict(int only_convolution) {
 		return;
 	}
 
-	read_dense_weights();
 	// Layer 20 (Dense)
 	level = 0;
+	read_dense_weights(level);
 	dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
 	add_bias_and_relu_flatten(mem_block2_dense, bd[level], dshape[level][1], 1);
 	reset_mem_block_dense(mem_block1_dense);
 
 	// Layer 21 (Dense)
 	level = 1;
+	read_dense_weights(level);
 	dense(mem_block2_dense, wd[level], mem_block1_dense, dshape[level][0], dshape[level][1]);
 	add_bias_and_relu_flatten(mem_block1_dense, bd[level], dshape[level][1], 1);
 	reset_mem_block_dense(mem_block2_dense);
 	
 	// Layer 22 (Dense)
 	level = 2;
+	read_dense_weights(level);
 	dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
 	add_bias_and_relu_flatten(mem_block2_dense, bd[level], dshape[level][1], 1);
 	softmax(mem_block2_dense, dshape[level][1]);
 	// dump_memory_structure_dense_to_file(mem_block2_dense, dshape[level][1]);
 	
+	//Free last layer weights
+	free_dense_weights_level(level);
 	return;
 }
 
@@ -870,12 +851,11 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	gettimeofday(&timeStart, NULL);
+	// gettimeofday(&timeStart, NULL);
 	// read_weights(weights_file, lvls);
-	weights_file_ptr = get_weights_ptr(weights_file);
-	gettimeofday(&timeEnd, NULL);
-	deltaTime = get_seconds(timeStart, timeEnd);
-	printf("Reading weights: %.3lf sec\n", deltaTime);
+	// gettimeofday(&timeEnd, NULL);
+	// deltaTime = get_seconds(timeStart, timeEnd);
+	// printf("Reading weights: %.3lf sec\n", deltaTime);
 
 	while (!feof(file_list)) {
 		gettimeofday(&timeStart, NULL);
@@ -887,6 +867,7 @@ int main(int argc, char *argv[]) {
 		init_image();
 		read_image(trimwhitespace(buf));
 		normalize_image();
+		weights_file_ptr = get_weights_ptr(weights_file);
 		// dump_image();
 		get_VGG16_predict(only_convolution);
 		output_predictions(results, only_convolution);
