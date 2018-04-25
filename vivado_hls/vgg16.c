@@ -7,6 +7,7 @@
 	Usage: ZFC_VGG16_CPU.exe <weights_path> <file_with_list_of_images> <output file> <output convolution features (optional)>
 	Example: ZFC_VGG16_CPU.exe "weights.txt" "image_list.txt" "results.txt" 1
 */
+
 /* Large File Support */
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE_SOURCE
@@ -41,7 +42,7 @@ int numthreads;
 
 // Weights and image block START
 // float ***image;
-float image[3][SIZE][SIZE];
+float image[3][SIZE + 2][SIZE + 2];
 int cshape[13][4] = { 
 	{ 64, 3, CONV_SIZE, CONV_SIZE },
 	{ 64, 64, CONV_SIZE, CONV_SIZE },
@@ -73,8 +74,8 @@ float **bd;
 int mem_block_shape[3] = {512, SIZE, SIZE};
 // float ***mem_block1;
 // float ***mem_block2;
-float mem_block1[512][SIZE][SIZE];
-float mem_block2[512][SIZE][SIZE];
+float mem_block1[512][SIZE + 2][SIZE + 2];
+float mem_block2[512][SIZE + 2][SIZE + 2];
 
 // Blocks for dense flatten layers
 int mem_block_dense_shape = { 512 * 7 * 7 };
@@ -84,11 +85,11 @@ float *mem_block2_dense;
 // Weights and image block END
 
 
-void reset_mem_block(float mem[512][SIZE][SIZE]) {
+void reset_mem_block(float mem[512][SIZE+2][SIZE+2]) {
 	int i, j, k;
 	for (i = 0; i < mem_block_shape[0]; i++) {
-		for (j = 0; j < mem_block_shape[1]; j++) {
-			for (k = 0; k < mem_block_shape[2]; k++) {
+		for (j = 0; j < (mem_block_shape[1]+2); j++) {
+			for (k = 0; k < (mem_block_shape[2]+2); k++) {
 				mem[i][j][k] = 0.0;
 			}
 		}
@@ -107,14 +108,14 @@ void reset_mem_block_dense(float *mem) {
 void init_memory() {
 	int i, j, k, l;
 
-	// Init image memory
-	// image = malloc(3 * sizeof(float**));
-	// for (i = 0; i < 3; i++) {
-	// 	image[i] = malloc(SIZE * sizeof(float*));
-	// 	for (j = 0; j < SIZE; j++) {
-	// 		image[i][j] = malloc(SIZE * sizeof(float));
-	// 	}
-	// }
+	// Init image memory to 0
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < (SIZE + 2); j++) {
+			for(k = 0; k < (SIZE + 2); k++) {
+				image[i][j][k] = 0.0;
+			}
+		}
+	}
 
 	// Init convolution weights
 	// wc = malloc(13 * sizeof(float****));
@@ -289,8 +290,8 @@ void read_image(char *in_file) {
 	}
 
 	/* Reading image */
-	for (i = 0; i < SIZE; i++) {
-		for (j = 0; j < SIZE; j++) {
+	for (i = 1; i <= SIZE; i++) {
+		for (j = 1; j <= SIZE; j++) {
 			for (l = 0; l < 3; l++) {
 				fscanf(iin, "%f", &dval);
 				image[l][i][j] = dval;
@@ -305,8 +306,8 @@ void normalize_image() {
 	float coef[3] = { 103.939, 116.779, 123.68 };
 
 	for (l = 0; l < 3; l++) {
-		for (i = 0; i < SIZE; i++) {
-			for (j = 0; j < SIZE; j++) {
+		for (i = 1; i <= SIZE; i++) {
+			for (j = 1; j <= SIZE; j++) {
 				image[l][i][j] -= coef[l];
 			}
 		}
@@ -314,11 +315,11 @@ void normalize_image() {
 }
 
 
-void add_bias_and_relu(float out[SIZE][SIZE], float bs, int size) {
+void add_bias_and_relu(float out[SIZE+2][SIZE+2], float bs, int size) {
 	int i, j;
 
-	for (i = 0; i < size; i++) {
-		for (j = 0; j < size; j++) {
+	for (i = 1; i <= size; i++) {
+		for (j = 1; j <= size; j++) {
 			out[i][j] += bs;
 			if (out[i][j] < 0)
 				out[i][j] = 0.0;
@@ -354,21 +355,27 @@ float max_of_4(float a, float b, float c, float d) {
 }
 
 
-void maxpooling(float out[SIZE][SIZE], int size) {
+void maxpooling(float out[SIZE+2][SIZE+2], int size) {
 	int i, j;
-	for (i = 0; i < size; i+=2) {
-		for (j = 0; j < size; j+=2) {
-			out[i / 2][j / 2] = max_of_4(out[i][j], out[i + 1][j], out[i][j + 1], out[i + 1][j + 1]);
+	for (i = 1; i <= size; i+=2) {
+		for (j = 1; j <= size; j+=2) {
+			out[(i+1) / 2][(j+1) / 2] = max_of_4(out[i][j], out[i + 1][j], out[i][j + 1], out[i + 1][j + 1]);
 		}
+	}
+	// Add zero padding
+	j = (size /2) + 1;
+	for (i = 1; i <= size; i++) {
+		out[i][j] = 0.0;
+		out[j][i] = 0.0;
 	}
 }
 
 
-void flatten(float in[512][SIZE][SIZE], float *out, int sh0, int sh1, int sh2) {
+void flatten(float in[512][SIZE+2][SIZE+2], float *out, int sh0, int sh1, int sh2) {
 	int i, j, k, total = 0;
 	for (i = 0; i < sh0; i++) {
-		for (j = 0; j < sh1; j++) {
-			for (k = 0; k < sh2; k++) {
+		for (j = 1; j <= sh1; j++) {
+			for (k = 1; k <= sh2; k++) {
 				out[total] = in[i][j][k];
 				total += 1;
 			}
@@ -457,8 +464,8 @@ void dump_memory_structure_dense_to_file(float *mem, int sh0) {
 void dump_image() {
 	int i, j, k;
 	for (i = 0; i < 3; i++) {
-		for (j = 0; j < SIZE; j++) {
-			for (k = 0; k < SIZE; k++) {
+		for (j = 1; j <= SIZE; j++) {
+			for (k = 1; k <= SIZE; k++) {
 				printf("%.12lf\n", image[i][j][k]);
 			}
 		}

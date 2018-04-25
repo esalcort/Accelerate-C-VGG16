@@ -7,6 +7,6 @@
 #define CONV_SIZE 3
 
 // External function prototypes
-void convolution_3_x_3(float matrix[SIZE][SIZE], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE][SIZE], int size);
+void convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size);
 
 #endif
