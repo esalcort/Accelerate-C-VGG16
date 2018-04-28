@@ -19,7 +19,6 @@
 #include <string.h>
 #include "vgg16.h"
 #include <ctype.h>
-#include <pthread.h>
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS 1

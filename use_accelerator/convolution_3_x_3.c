@@ -1,4 +1,5 @@
 #include "vgg16.h"
+//#include <pthread.h>
 
 void convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
 	int i, j;
