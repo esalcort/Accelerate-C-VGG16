@@ -105,5 +105,15 @@ void convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CON
 		printf("convolution_3_x_3:\tNormal convolution\n");
 #endif
 	}
-	
+}
+
+void convolution_2d(int shape_depth, float input[][SIZE + 2][SIZE + 2], float weights_kernel[][CONV_SIZE][CONV_SIZE],
+					float output[SIZE + 2][SIZE + 2], int size)
+{
+	unsigned char j=0;
+	reset_fpga(size);
+		for (j = 0; j < shape_depth; j++) {
+			convolution_3_x_3(input[j], weights_kernel[j], output, size);
+		}
+	join_fpga(output, size);
 }

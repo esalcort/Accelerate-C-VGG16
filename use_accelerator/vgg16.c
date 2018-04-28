@@ -485,21 +485,15 @@ void get_VGG16_predict(int only_convolution) {
 	cur_size = SIZE;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		reset_fpga(cur_size);
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(image[j], wc[level][i][j], mem_block1[i], cur_size);
-		}
-		join_fpga(mem_block1[i], cur_size);
+		convolution_2d(cshape[level][1], image, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
 	}
-/*	
+	
 	// Layer 2 (Convolution 64 -> 64)
 	level = 1;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(mem_block1[j], wc[level][i][j], mem_block2[i], cur_size);
-		}
+		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
 	}
 	reset_mem_block(mem_block1);
@@ -526,9 +520,7 @@ void get_VGG16_predict(int only_convolution) {
 	level = 3;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(mem_block1[j], wc[level][i][j], mem_block2[i], cur_size);
-		}
+		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
 	}
 	reset_mem_block(mem_block1);
@@ -555,9 +547,7 @@ void get_VGG16_predict(int only_convolution) {
 	level = 5;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(mem_block1[j], wc[level][i][j], mem_block2[i], cur_size);
-		}
+		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
 	}
 	reset_mem_block(mem_block1);
@@ -584,9 +574,7 @@ void get_VGG16_predict(int only_convolution) {
 	level = 7;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(mem_block1[j], wc[level][i][j], mem_block2[i], cur_size);
-		}
+		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
 	}
 	reset_mem_block(mem_block1);
@@ -606,9 +594,7 @@ void get_VGG16_predict(int only_convolution) {
 	level = 9;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(mem_block1[j], wc[level][i][j], mem_block2[i], cur_size);
-		}
+		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
 	}
 	reset_mem_block(mem_block1);
@@ -635,9 +621,7 @@ void get_VGG16_predict(int only_convolution) {
 	level = 11;
 	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
-		for (j = 0; j < cshape[level][1]; j++) {
-			convolution_3_x_3(mem_block1[j], wc[level][i][j], mem_block2[i], cur_size);
-		}
+		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
 	}
 	reset_mem_block(mem_block1);
@@ -659,7 +643,7 @@ void get_VGG16_predict(int only_convolution) {
 		maxpooling(mem_block1[i], cur_size);
 	}
 	cur_size /= 2;
-*/
+
 	cur_size = 7;	
 	// Layer 19 (Flatten)
 	flatten(mem_block1, mem_block1_dense, cshape[level][0], cur_size, cur_size);
