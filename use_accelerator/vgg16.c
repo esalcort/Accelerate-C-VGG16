@@ -13,7 +13,6 @@
 #define _LARGEFILE_SOURCE
 
 #include <sys/time.h>
-#include <omp.h>
 #include <string.h>
 #include "vgg16.h"
 #include <ctype.h>
@@ -483,7 +482,7 @@ void get_VGG16_predict(int only_convolution) {
 	// Layer 1 (Convolution 3 -> 64)
 	level = 0;
 	cur_size = SIZE;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], image, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -491,7 +490,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 2 (Convolution 64 -> 64)
 	level = 1;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
@@ -499,7 +498,7 @@ void get_VGG16_predict(int only_convolution) {
 	reset_mem_block(mem_block1);
 	
 	// Layer 3 (MaxPooling)
-	//#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		maxpooling(mem_block2[i], cur_size);
 	}
@@ -507,7 +506,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 4 (Convolution 64 -> 128)
 	level = 2;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block2, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -516,7 +515,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 5 (Convolution 128 -> 128)
 	level = 3;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
@@ -524,7 +523,7 @@ void get_VGG16_predict(int only_convolution) {
 	reset_mem_block(mem_block1);
 	
 	// Layer 6 (MaxPooling)
-	//#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		maxpooling(mem_block2[i], cur_size);
 	}
@@ -532,7 +531,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 7 (Convolution 128 -> 256)
 	level = 4;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block2, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -541,7 +540,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 8 (Convolution 256 -> 256)
 	level = 5;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
@@ -550,7 +549,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 9 (Convolution 256 -> 256)
 	level = 6;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block2, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -558,7 +557,7 @@ void get_VGG16_predict(int only_convolution) {
 	reset_mem_block(mem_block2);
 	
 	// Layer 10 (MaxPooling)
-	//#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		maxpooling(mem_block1[i], cur_size);
 	}
@@ -566,7 +565,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 11 (Convolution 256 -> 512)
 	level = 7;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
@@ -575,7 +574,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 12 (Convolution 512 -> 512)
 	level = 8;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block2, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -584,7 +583,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 13 (Convolution 512 -> 512)
 	level = 9;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
@@ -592,7 +591,7 @@ void get_VGG16_predict(int only_convolution) {
 	reset_mem_block(mem_block1);
 	
 	// Layer 14 (MaxPooling)
-	//#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		maxpooling(mem_block2[i], cur_size);
 	}
@@ -600,7 +599,7 @@ void get_VGG16_predict(int only_convolution) {
 	
 	// Layer 15 (Convolution 512 -> 512)
 	level = 10;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block2, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -609,7 +608,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 16 (Convolution 512 -> 512)
 	level = 11;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block1, wc[level][i], mem_block2[i], cur_size);
 		add_bias_and_relu(mem_block2[i], bc[level][i], cur_size);
@@ -618,7 +617,7 @@ void get_VGG16_predict(int only_convolution) {
 
 	// Layer 17 (Convolution 512 -> 512)
 	level = 12;
-	//#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for private(j) schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		convolution_2d(cshape[level][1], mem_block2, wc[level][i], mem_block1[i], cur_size);
 		add_bias_and_relu(mem_block1[i], bc[level][i], cur_size);
@@ -626,13 +625,12 @@ void get_VGG16_predict(int only_convolution) {
 	reset_mem_block(mem_block2);
 	
 	// Layer 18 (MaxPooling)
-	//#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
+	#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
 	for (i = 0; i < cshape[level][0]; i++) {
 		maxpooling(mem_block1[i], cur_size);
 	}
 	cur_size /= 2;
 
-	cur_size = 7;	
 	// Layer 19 (Flatten)
 	flatten(mem_block1, mem_block1_dense, cshape[level][0], cur_size, cur_size);
 	if (only_convolution == 1) {
