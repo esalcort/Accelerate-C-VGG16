@@ -15,7 +15,7 @@ extern int numthreads;
 void convolution_in_fpga(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
 	
 #ifdef USE_FPGA //TODO: Not tested
-	set_arguments(matrix, kernel, out, size);
+	fpga_set_arguments(matrix, kernel, out, size);
 	fpga_start();
 	fpga_poll();
 #else
