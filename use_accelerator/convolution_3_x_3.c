@@ -104,7 +104,7 @@ void convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CON
 	// 	// pthread_create(&tid, NULL, convolution_in_fpga, NULL);
 	// 	convolution_in_fpga();
 		convolution_in_fpga(matrix, kernel, out, size);
-	// }
+	}
 	else {
 		for (i = 0; i < size; i++) {
 			for (j = 0; j < size; j++) {
