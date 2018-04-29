@@ -188,7 +188,7 @@ int pm(unsigned int target_addr, unsigned int value){
 	munmap(NULL, MAP_SIZE);
 	return 0;
 }
-
+//TODO: USE vgg16.h
 float dm_float( unsigned int target_addr){
 
 	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
@@ -229,7 +229,7 @@ float dm_float( unsigned int target_addr){
 	munmap(NULL, MAP_SIZE);
 	return value;
 }
-
+//TODO: Use vgg16.h
 int pm_float(unsigned int target_addr, float value){
 	
 	int fd = open("/dev/mem", O_RDWR|O_SYNC);
