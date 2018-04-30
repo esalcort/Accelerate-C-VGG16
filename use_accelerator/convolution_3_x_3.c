@@ -44,18 +44,7 @@ void convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CON
 	float sum;
 
 	if(!fpga_busy) {
-		/*
-		fpga_convolution.matrix = matrix;
-		fpga_convolution.out = fpga_out;
-		fpga_convolution.kernel = kernel;
-		fpga_convolution.size = size;
-		*/
-	// 	fpga_matrix = matrix;
-	// 	fpga_kernel = kernel;
-	// 	fpga_size = size;
-	// 	fpga_busy = 1; 
-	// 	// pthread_create(&tid, NULL, convolution_in_fpga, NULL);
-	// 	convolution_in_fpga();
+		fpga_busy = 1; 
 		convolution_in_fpga(matrix, kernel, out, size);
 	}
 	else {
