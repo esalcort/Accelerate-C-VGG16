@@ -75,9 +75,10 @@ float mem_block1[512][SIZE + 2][SIZE + 2];
 float mem_block2[512][SIZE + 2][SIZE + 2];
 
 // Blocks for dense flatten layers
+// FOCUS ON CONVOLUTION ONLY
 int mem_block_dense_shape = { 512 * 7 * 7 };
-float *mem_block1_dense;
-float *mem_block2_dense;
+float *mem_block1_dense; // Used for flatten()
+// float *mem_block2_dense;
 
 // Weights and image block END
 
@@ -157,8 +158,9 @@ void init_memory() {
 	reset_mem_block(mem_block2);
 
 	// Init mem blocks dense
+	// FOCUS ON CONVOLUTIONS ONLY
 	mem_block1_dense = calloc(mem_block_dense_shape, sizeof(float));
-	mem_block2_dense = calloc(mem_block_dense_shape, sizeof(float));
+	// mem_block2_dense = calloc(mem_block_dense_shape, sizeof(float));
 }
 
 
@@ -214,8 +216,9 @@ void free_memory() {
 	// free(mem_block1);
 	// free(mem_block2);
 
+	// FOCUS ON CONVOLUTIONS ONLY
 	free(mem_block1_dense);
-	free(mem_block2_dense);
+	// free(mem_block2_dense);
 }
 
 
@@ -254,22 +257,23 @@ void read_weights(char *in_file, int lvls) {
 	}
 
 	// Reading dense weights
-	for (z = 0; z < 3; z++) {
-		if (total_lvls_read >= lvls && lvls != -1)
-			break;
-		printf("Read dense block %d weights\n", z);
-		for (i = 0; i < dshape[z][0]; i++) {
-			for (j = 0; j < dshape[z][1]; j++) {
-				fscanf(iin, "%f", &dval);
-				wd[z][i][j] = dval;
-			}
-		}
-		for (i = 0; i < dshape[z][1]; i++) {
-			fscanf(iin, "%f", &dval);
-			bd[z][i] = dval;
-		}
-		total_lvls_read += 1;
-	}
+	// FOCUS ON CONVOLUTIONS ONLY
+	// for (z = 0; z < 3; z++) {
+	// 	if (total_lvls_read >= lvls && lvls != -1)
+	// 		break;
+	// 	printf("Read dense block %d weights\n", z);
+	// 	for (i = 0; i < dshape[z][0]; i++) {
+	// 		for (j = 0; j < dshape[z][1]; j++) {
+	// 			fscanf(iin, "%f", &dval);
+	// 			wd[z][i][j] = dval;
+	// 		}
+	// 	}
+	// 	for (i = 0; i < dshape[z][1]; i++) {
+	// 		fscanf(iin, "%f", &dval);
+	// 		bd[z][i] = dval;
+	// 	}
+	// 	total_lvls_read += 1;
+	// }
 
 	fclose(iin);
 }
@@ -477,7 +481,7 @@ void get_VGG16_predict(int only_convolution) {
 	reset_mem_block(mem_block1);
 	reset_mem_block(mem_block2);
 	reset_mem_block_dense(mem_block1_dense);
-	reset_mem_block_dense(mem_block2_dense);
+	// reset_mem_block_dense(mem_block2_dense);
 
 	// Layer 1 (Convolution 3 -> 64)
 	level = 0;
@@ -637,24 +641,25 @@ void get_VGG16_predict(int only_convolution) {
 		return;
 	}
 
-	// Layer 20 (Dense)
-	level = 0;
-	dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
-	add_bias_and_relu_flatten(mem_block2_dense, bd[level], dshape[level][1], 1);
-	reset_mem_block_dense(mem_block1_dense);
+	//FOCUS ON CONVOLUTION ONLY
+	// // Layer 20 (Dense)
+	// level = 0;
+	// dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
+	// add_bias_and_relu_flatten(mem_block2_dense, bd[level], dshape[level][1], 1);
+	// reset_mem_block_dense(mem_block1_dense);
 
-	// Layer 21 (Dense)
-	level = 1;
-	dense(mem_block2_dense, wd[level], mem_block1_dense, dshape[level][0], dshape[level][1]);
-	add_bias_and_relu_flatten(mem_block1_dense, bd[level], dshape[level][1], 1);
-	reset_mem_block_dense(mem_block2_dense);
+	// // Layer 21 (Dense)
+	// level = 1;
+	// dense(mem_block2_dense, wd[level], mem_block1_dense, dshape[level][0], dshape[level][1]);
+	// add_bias_and_relu_flatten(mem_block1_dense, bd[level], dshape[level][1], 1);
+	// reset_mem_block_dense(mem_block2_dense);
 	
-	// Layer 22 (Dense)
-	level = 2;
-	dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
-	add_bias_and_relu_flatten(mem_block2_dense, bd[level], dshape[level][1], 1);
-	softmax(mem_block2_dense, dshape[level][1]);
-	// dump_memory_structure_dense_to_file(mem_block2_dense, dshape[level][1]);
+	// // Layer 22 (Dense)
+	// level = 2;
+	// dense(mem_block1_dense, wd[level], mem_block2_dense, dshape[level][0], dshape[level][1]);
+	// add_bias_and_relu_flatten(mem_block2_dense, bd[level], dshape[level][1], 1);
+	// softmax(mem_block2_dense, dshape[level][1]);
+	// // dump_memory_structure_dense_to_file(mem_block2_dense, dshape[level][1]);
 	
 	return;
 }
@@ -662,16 +667,16 @@ void get_VGG16_predict(int only_convolution) {
 
 void output_predictions(FILE *out, int only_convolution) {
 	int i;
-	if (only_convolution == 1) {
+	// if (only_convolution == 1) {
 		for (i = 0; i < 512*7*7; i++) {
 			fprintf(out, "%g\n", mem_block1_dense[i]);
 		}
-	}
-	else {
-		for (i = 0; i < dshape[2][1]; i++) {
-			fprintf(out, "%g\n", mem_block2_dense[i]);
-		}
-	}
+	// }
+	// else {
+	// 	for (i = 0; i < dshape[2][1]; i++) {
+	// 		fprintf(out, "%g\n", mem_block2_dense[i]);
+	// 	}
+	// }
 	fprintf(out, "\n");
 }
 
