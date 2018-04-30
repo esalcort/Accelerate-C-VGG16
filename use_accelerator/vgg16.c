@@ -63,8 +63,9 @@ int dshape[3][2] = {
 	{ 4096, 4096 },
 	{ 4096, 1000 }
 };
-float ***wd;
-float **bd;
+// FOCUS ON CONVOLUTION ONLY
+// float ***wd;
+// float **bd;
 
 
 // Blocks for intermediate convolutions
@@ -133,15 +134,15 @@ void init_memory() {
 	}
 
 	// Init dense weights
-	wd = malloc(3 * sizeof(float**));
-	bd = malloc(3 * sizeof(float*));
-	for (l = 0; l < 3; l++) {
-		wd[l] = malloc(dshape[l][0] * sizeof(float*));
-		for (i = 0; i < dshape[l][0]; i++) {
-			wd[l][i] = malloc(dshape[l][1] * sizeof(float));
-		}
-		bd[l] = malloc(dshape[l][1] * sizeof(float));
-	}
+	// wd = malloc(3 * sizeof(float**));
+	// bd = malloc(3 * sizeof(float*));
+	// for (l = 0; l < 3; l++) {
+	// 	wd[l] = malloc(dshape[l][0] * sizeof(float*));
+	// 	for (i = 0; i < dshape[l][0]; i++) {
+	// 		wd[l][i] = malloc(dshape[l][1] * sizeof(float));
+	// 	}
+	// 	bd[l] = malloc(dshape[l][1] * sizeof(float));
+	// }
 
 	// Init mem_blocks
 	// mem_block1 = malloc(mem_block_shape[0] * sizeof(float**));
@@ -194,15 +195,15 @@ void free_memory() {
 	free(bc);
 
 	// Free dense weights
-	for (l = 0; l < 3; l++) {
-		for (i = 0; i < dshape[l][0]; i++) {
-			free(wd[l][i]);
-		}
-		free(wd[l]);
-		free(bd[l]);
-	}
-	free(wd);
-	free(bd);
+	// for (l = 0; l < 3; l++) {
+	// 	for (i = 0; i < dshape[l][0]; i++) {
+	// 		free(wd[l][i]);
+	// 	}
+	// 	free(wd[l]);
+	// 	free(bd[l]);
+	// }
+	// free(wd);
+	// free(bd);
 
 	// Free memblocks
 	// for (i = 0; i < mem_block_shape[0]; i++) {
