@@ -14,6 +14,7 @@
 #define ACCELERATOR_ADDRESS	0x43C00000UL
 #define ACCELERATOR_RANGE	0x100000 //1MB
 #define SIZE_OFFSET			0x00010
+#define RESET_OFFSET		0x00014
 #define KERNEL_OFFSET		0x00040
 #define MATRIX_OFFSET		0x40000
 #define OUT_R_OFFSET		0x80000
@@ -177,7 +178,7 @@ int pm(unsigned int target_addr, unsigned int value){
 	return 0;
 }
 // TODO: Should I create separate methods?
-void fpga_set_arguments(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
+void fpga_set_matrix_kernel(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], int size) {
 	int i, j;
 	unsigned int matrix_address_in_fpga;
 	// MATRIX
@@ -187,19 +188,23 @@ void fpga_set_arguments(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CO
 			pm_float(matrix_address_in_fpga, matrix[i][j]);
 		}
 	}
-	// OUT
-	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
-			pm_float(matrix_address_in_fpga, out[i][j]);
-		}
-	}
 	// KERNEL
 	matrix_address_in_fpga = ACCELERATOR_ADDRESS + KERNEL_OFFSET;
 	for(i = 0; i < CONV_SIZE; i++) {
 		for(j = 0; j < CONV_SIZE; j++) {
 			pm_float(matrix_address_in_fpga, kernel[i][j]);
 			matrix_address_in_fpga += sizeof(float);
+		}
+	}
+}
+void fpga_set_out_size(float out[SIZE+2][SIZE+2], int size) {
+	int i, j;
+	unsigned int matrix_address_in_fpga;
+	// OUT_R
+	for(i=0; i < (size+2); i++) {
+		for(j=0; j < (size+2); j++) {
+			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
+			pm_float(matrix_address_in_fpga, out[i][j]);
 		}
 	}
 	// SIZE
@@ -213,4 +218,15 @@ void fpga_poll() {
 	while ((control_signals & 2) == 0) {
 		control_signals = dm(ACCELERATOR_ADDRESS);
 	}
+}
+void fpga_read_out_r(float out[SIZE+2][SIZE+2], int size) {
+	int i, j;
+	unsigned int matrix_address_in_fpga;
+	// OUT_R
+	for(i=0; i < (size+2); i++) {
+		for(j=0; j < (size+2); j++) {
+			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
+			out[i][j] = dm_float(matrix_address_in_fpga);
+		}
+	}	
 }
