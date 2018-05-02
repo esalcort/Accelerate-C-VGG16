@@ -1,14 +1,9 @@
 /* Test Vivado HLS */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sys/time.h>
+
+#include "vgg16.h"
 
 #define SIZE 224
 #define CONV_SIZE 3
@@ -36,7 +31,7 @@ float dut_out_matrix[SIZE+2][SIZE+2];
 float kernel_static[CONV_SIZE][CONV_SIZE] = {{1.001, 13.88, 26.04}, {35.298, 0.005, 1.104}, {0.009, 95.007, 3.006}};
 int test_sizes[] = {224, 28, 14, 112, 56};
 
-struct timeval fpga_start, fpga_end, fpga_all_start, fpga_all_end, sw_start, sw_end;
+struct timeval fpga_start_time, fpga_end_time, fpga_all_start, fpga_all_end, sw_start, sw_end;
 
 void orig_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
 	gettimeofday(&sw_start, NULL);
@@ -65,16 +60,11 @@ void orig_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 
 void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
 	
+	gettimeofday(&fpga_all_start, NULL);
 	unsigned char i, j;
 	// FILL MATRIX
 	// printf("Copy matrix\n");
-	// fpga_set_matrix(matrix, size);
-
-    // SET SIZE
-	// printf("Copy size\n");
-	// fpga_set_size(size);
-
-	fpga_set_matrix_kernel(matrix, kernel, size);
+	fpga_set_matrix(matrix, size);
 
 	// SET KERNEL
 	// printf("Copy kernel\n");
@@ -82,12 +72,12 @@ void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 
 	// START ACCELLERATOR
 	// printf("Set ap_start bit\n");
-	gettimeofday(&fpga_start, NULL);
+	gettimeofday(&fpga_start_time, NULL);
 	fpga_start();
 
 	// POLL FOR DONE
 	fpga_poll();
-	gettimeofday(&fpga_end, NULL);
+	gettimeofday(&fpga_end_time, NULL);
 }
 
 void read_image(char *in_file) {
@@ -128,11 +118,9 @@ int main(int argc, char *argv[])
 			// Perform reference code
 			orig_convolution_3_x_3(in_matrix[l], kernel_static, out_matrix, size);
 			// Perform dut code
-			gettimeofday(&fpga_all_start, NULL);
 			// fpga_set_size(size);
 			fpga_convolution_3_x_3(in_matrix[l], kernel_static, dut_out_matrix, size);
-			gettimeofday(&fpga_all_end, NULL);
-			printf("FPGA TIME:\t%d\n", (fpga_start.tv_sec - fpga_end.tv_sec) * 1000000 + (fpga_start.tv_usec - fpga_end.tv_usec));
+			printf("FPGA TIME:\t%d\n", (fpga_start_time.tv_sec - fpga_end_time.tv_sec) * 1000000 + (fpga_start_time.tv_usec - fpga_end_time.tv_usec));
 			printf("FPGA ALL:\t%d\n", (fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 + (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
 			printf("SW TIME:\t%d\n", (sw_start.tv_sec - sw_end.tv_sec) * 1000000 + (sw_start.tv_usec - sw_end.tv_usec));
 		}

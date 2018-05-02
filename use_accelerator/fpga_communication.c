@@ -226,18 +226,18 @@ void fpga_set_matrix(float matrix[SIZE+2][SIZE+2], int size) {
 	// MATRIX
 	for(i=0; i < (size+2); i++) {
 			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + MATRIX_OFFSET) + (i * (SIZE+2) * sizeof(float));
-			pm_float_row(matrix_address_in_fpga, &matrix[i], (size+2));
+			pm_float_row(matrix_address_in_fpga, matrix[i], (size+2));
 	}
 }
 
-void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE], int size) {
+void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE]) {
 	int i, j;
 	unsigned int matrix_address_in_fpga;
 	// KERNEL
 	matrix_address_in_fpga = ACCELERATOR_ADDRESS + KERNEL_OFFSET;
 	for(i=0; i < CONV_SIZE; i++) {
 			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + KERNEL_OFFSET) + (i * (CONV_SIZE) * sizeof(float));
-			pm_float_row(matrix_address_in_fpga, &matrix[i], CONV_SIZE);
+			pm_float_row(matrix_address_in_fpga, kernel[i], CONV_SIZE);
 	}
 }
 
@@ -247,7 +247,7 @@ void fpga_set_out_size(float out[SIZE+2][SIZE+2], int size) {
 	// OUT_R	
 	for(i=0; i < (size+2); i++) {
 			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float));
-			pm_float_row(matrix_address_in_fpga, &matrix[i], (size+2));
+			pm_float_row(matrix_address_in_fpga, out[i], (size+2));
 	}
 	// SIZE
 	pm(ACCELERATOR_ADDRESS + SIZE_OFFSET, size);
