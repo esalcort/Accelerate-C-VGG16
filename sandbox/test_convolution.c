@@ -27,7 +27,6 @@
 #define FPGA_MATRIX_READ	0
 #define FPGA_MATRIX_WRITE	1
 
-#define LOG_DM
 
 float in_matrix[SIZE+2][SIZE+2];
 float out_matrix[SIZE+2][SIZE+2];
@@ -400,7 +399,6 @@ int main(int argc, char *argv[])
 		fpga_convolution_3_x_3(in_matrix, kernel_static, dut_out_matrix, size);
 		for(j = 0; j <= (size+1); j++) {
 			for (k = 0; k <= (size+1); k++)
-		    printf("Expected value %f actual value %f\n", out_matrix[j][k], dut_out_matrix[j][k]);
 			if (out_matrix[j][k] != dut_out_matrix[j][k]) {
 				// Error
 				printf("Error at row %d and column %d\n", j, k);
@@ -421,12 +419,6 @@ int main(int argc, char *argv[])
 		printf("FPGA ALL:\t%d\n", (fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 + (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
 		printf("SW TIME:\t%d\n", (sw_start.tv_sec - sw_end.tv_sec) * 1000000 + (sw_start.tv_usec - sw_end.tv_usec));
 	}
-	printf("\n\n");
-	pm_float(ACCELERATOR_ADDRESS + KERNEL_OFFSET, kernel_static[1][1]);
-    dm_float(ACCELERATOR_ADDRESS + KERNEL_OFFSET);
- 	pm_float(ACCELERATOR_ADDRESS + KERNEL_OFFSET, 5.5);
-    dm_float(ACCELERATOR_ADDRESS + KERNEL_OFFSET);
-
 	return error;
 }
 
