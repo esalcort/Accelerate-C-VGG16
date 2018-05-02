@@ -19,85 +19,6 @@
 #define MATRIX_OFFSET		0x40000
 #define OUT_R_OFFSET		0x80000
 
-float dm_float( unsigned int target_addr){
-
-	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
-    volatile float *regs, *address ;
-    unsigned long offset, lp_cnt;
-    float value;
-
-	if(fd == -1)
-    {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return -1;
-    }
-
-	offset = 0;
-	lp_cnt = 1;
-
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-    while( lp_cnt) {
-    	#ifdef LOG_DM
-        printf("0x%.4x" , (target_addr+offset));
-        #endif
-
-		address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-		value = *address;
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", value);              // display register value
-        #endif
-        lp_cnt -= 1;
-        offset  += 4; // WORD alligned
-    } // End while loop	
-	
-	int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(NULL, MAP_SIZE);
-	return value;
-}
-
-int pm_float(unsigned int target_addr, float value){
-	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
-    volatile float *regs, *address ;
-	unsigned int offset = 0;
-	int lp_cnt = 1;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
-	
-	while (lp_cnt) {
-		#ifdef LOG_DM
-        printf("0x%.8x" , (target_addr + offset));
-        #endif
-        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-        *address = value;
-		// perform write command
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", *address);            // display register valuue
-        #endif
-		lp_cnt -= 1;
-        offset  += 4; //
-		// WORD alligned
-    } // End of while loop
-
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(NULL, MAP_SIZE);
-	return 0;
-}
 unsigned int dm( unsigned int target_addr){
 
 	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
@@ -135,7 +56,7 @@ unsigned int dm( unsigned int target_addr){
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(NULL, MAP_SIZE);
+	munmap(regs, MAP_SIZE);
 	return value;
 }
 
@@ -174,7 +95,87 @@ int pm(unsigned int target_addr, unsigned int value){
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(NULL, MAP_SIZE);
+	munmap(regs, MAP_SIZE);
+	return 0;
+}
+
+float dm_float( unsigned int target_addr){
+
+	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
+    volatile float *regs, *address ;
+    unsigned long offset, lp_cnt;
+    float value;
+
+	if(fd == -1)
+    {
+		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
+        return -1;
+    }
+
+	offset = 0;
+	lp_cnt = 1;
+
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
+    while( lp_cnt) {
+    	#ifdef LOG_DM
+        printf("0x%.4x" , (target_addr+offset));
+        #endif
+
+		address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
+		value = *address;
+		#ifdef LOG_DM
+        printf(" = 0x%.8x\n", value);              // display register value
+        #endif
+        lp_cnt -= 1;
+        offset  += 4; // WORD alligned
+    } // End while loop	
+	
+	int temp = close(fd);
+    if(temp == -1)
+    {
+        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
+        return -1;
+    }
+	munmap(regs, MAP_SIZE);
+	return value;
+}
+
+int pm_float(unsigned int target_addr, float value){
+	
+	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+    volatile float *regs, *address ;
+	unsigned int offset = 0;
+	int lp_cnt = 1;
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
+
+    if(fd == -1)
+    {
+        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
+		return -1;
+    }
+	
+	while (lp_cnt) {
+		#ifdef LOG_DM
+        printf("0x%.8x" , (target_addr + offset));
+        #endif
+        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
+        *address = value;
+		// perform write command
+		#ifdef LOG_DM
+        printf(" = 0x%.8x\n", *address);            // display register valuue
+        #endif
+		lp_cnt -= 1;
+        offset  += 4; //
+		// WORD alligned
+    } // End of while loop
+
+    int temp = close(fd);
+    if(temp == -1)
+    {
+        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
+        return -1;
+    }
+	munmap(regs, MAP_SIZE);
 	return 0;
 }
 // TODO: Should I create separate methods?
