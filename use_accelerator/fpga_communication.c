@@ -178,35 +178,76 @@ int pm_float(unsigned int target_addr, float value){
 	munmap(regs, MAP_SIZE);
 	return 0;
 }
+
+int pm_float_row(unsigned int target_addr, float *value, int size){	
+	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+    volatile float *regs, *address ;
+	unsigned int offset = 0;
+	int lp_cnt = size;
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
+
+    if(fd == -1)
+    {
+        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
+		return -1;
+    }
+	
+	while (lp_cnt) {
+		#ifdef LOG_DM
+        printf("0x%.8x" , (target_addr + offset));
+        #endif
+        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
+        *address = *value;
+		// perform write command
+		#ifdef LOG_DM
+        printf(" = 0x%.8x\n", *address);            // display register valuue
+        #endif
+		lp_cnt -= 1;
+        offset  += 4;
+		value++;
+		//
+		// WORD alligned
+    } // End of while loop
+
+    int temp = close(fd);
+    if(temp == -1)
+    {
+        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
+        return -1;
+    }
+	munmap(regs, MAP_SIZE);
+	return 0;
+}
+
 // TODO: Should I create separate methods?
-void fpga_set_matrix_kernel(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], int size) {
+void fpga_set_matrix(float matrix[SIZE+2][SIZE+2], int size) {
 	int i, j;
 	unsigned int matrix_address_in_fpga;
 	// MATRIX
 	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + MATRIX_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
-			pm_float(matrix_address_in_fpga, matrix[i][j]);
-		}
-	}
-	// KERNEL
-	matrix_address_in_fpga = ACCELERATOR_ADDRESS + KERNEL_OFFSET;
-	for(i = 0; i < CONV_SIZE; i++) {
-		for(j = 0; j < CONV_SIZE; j++) {
-			pm_float(matrix_address_in_fpga, kernel[i][j]);
-			matrix_address_in_fpga += sizeof(float);
-		}
+			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + MATRIX_OFFSET) + (i * (SIZE+2) * sizeof(float));
+			pm_float_row(matrix_address_in_fpga, &matrix[i], (size+2));
 	}
 }
+
+void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE], int size) {
+	int i, j;
+	unsigned int matrix_address_in_fpga;
+	// KERNEL
+	matrix_address_in_fpga = ACCELERATOR_ADDRESS + KERNEL_OFFSET;
+	for(i=0; i < CONV_SIZE; i++) {
+			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + KERNEL_OFFSET) + (i * (CONV_SIZE) * sizeof(float));
+			pm_float_row(matrix_address_in_fpga, &matrix[i], CONV_SIZE);
+	}
+}
+
 void fpga_set_out_size(float out[SIZE+2][SIZE+2], int size) {
 	int i, j;
 	unsigned int matrix_address_in_fpga;
-	// OUT_R
+	// OUT_R	
 	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
-			pm_float(matrix_address_in_fpga, out[i][j]);
-		}
+			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float));
+			pm_float_row(matrix_address_in_fpga, &matrix[i], (size+2));
 	}
 	// SIZE
 	pm(ACCELERATOR_ADDRESS + SIZE_OFFSET, size);
