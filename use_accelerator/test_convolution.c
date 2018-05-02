@@ -12,7 +12,9 @@
 
 #define SIZE 224
 #define CONV_SIZE 3
-#define SIZES_TO_TEST	1
+
+#define SIZES_TO_TEST	5
+#define IN_FRAMES_TO_TEST	3
 
 #define MAP_SIZE 4096UL
 #define MAP_MASK (MAP_SIZE - 1)
@@ -28,7 +30,7 @@
 #define FPGA_MATRIX_WRITE	1
 
 
-float in_matrix[SIZE+2][SIZE+2];
+float in_matrix[3][SIZE+2][SIZE+2];
 float out_matrix[SIZE+2][SIZE+2];
 float dut_out_matrix[SIZE+2][SIZE+2];
 float kernel_static[CONV_SIZE][CONV_SIZE] = {{1.001, 13.88, 26.04}, {35.298, 0.005, 1.104}, {0.009, 95.007, 3.006}};
@@ -296,7 +298,7 @@ void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 }
 
 void read_image(char *in_file) {
-	int i, j;
+	int i, j, l;
 	FILE *iin;
 	float dval;
 
@@ -309,8 +311,10 @@ void read_image(char *in_file) {
 	/* Reading image */
 	for (i = 1; i <= SIZE; i++) {
 		for (j = 1; j <= SIZE; j++) {
-			fscanf(iin, "%f", &dval);
-			in_matrix[i][j] = dval;
+			for (l = 0; l < IN_FRAMES_TO_TEST; l++) {
+				fscanf(iin, "%f", &dval);
+				in_matrix[l][i][j] = dval;
+			}
 		}
 	}
 	fclose(iin);
@@ -319,38 +323,38 @@ void read_image(char *in_file) {
 int main(int argc, char *argv[])
 {
 	/* code */
-	unsigned char i, j, k;
+	unsigned char i, j, k, l;
 	unsigned int error = 0;
 	int size;
 	read_image(argv[1]);
 	for(i = 0; i < SIZES_TO_TEST; i++) {
 		size = test_sizes[i];
-		printf("Test Image Width: %d\n", size);
-		// Perform reference code
-		orig_convolution_3_x_3(in_matrix, kernel_static, out_matrix, size);
-		// Perform dut code
-		fpga_convolution_3_x_3(in_matrix, kernel_static, dut_out_matrix, size);
-		for(j = 0; j <= (size+1); j++) {
-			for (k = 0; k <= (size+1); k++)
-			if (out_matrix[j][k] != dut_out_matrix[j][k]) {
-				// Error
-				printf("Error at row %d and column %d\n", j, k);
-				printf("Expected value %f actual value %f\n", out_matrix[j][k], dut_out_matrix[j][k]);
-				error++;
+		for (l = 0; l < IN_FRAMES_TO_TEST; l++) {
+			printf("Test Image Width: %d, Frame #: %d\n", size, l);
+			// Perform reference code
+			orig_convolution_3_x_3(in_matrix[l], kernel_static, out_matrix, size);
+			// Perform dut code
+			fpga_convolution_3_x_3(in_matrix[l], kernel_static, dut_out_matrix, size);
+			for(j = 0; j <= (size+1); j++) {
+				for (k = 0; k <= (size+1); k++)
+				if (out_matrix[j][k] != dut_out_matrix[j][k]) {
+					// Error
+					printf("Error at row %d and column %d\n", j, k);
+					printf("Expected value %f actual value %f\n", out_matrix[j][k], dut_out_matrix[j][k]);
+					error++;
+				}
 			}
+			printf("FPGA TIME:\t%d\n", (fpga_start.tv_sec - fpga_end.tv_sec) * 1000000 + (fpga_start.tv_usec - fpga_end.tv_usec));
+			printf("FPGA ALL:\t%d\n", (fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 + (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
+			printf("SW TIME:\t%d\n", (sw_start.tv_sec - sw_end.tv_sec) * 1000000 + (sw_start.tv_usec - sw_end.tv_usec));
 		}
-		// Change input matrix
-		memcpy(in_matrix, out_matrix, (SIZE+2)*(SIZE+2)*sizeof(float));
-		printf("Copied %d bytes \n", (SIZE+2)*(SIZE+2)*sizeof(float) );
 	}
 	if (error > 0) {
 		printf("ERROR: TEST FAILED\n");
 	}
 	else {
 		printf("DONE: TEST PASSED\n");
-		printf("FPGA TIME:\t%d\n", (fpga_start.tv_sec - fpga_end.tv_sec) * 1000000 + (fpga_start.tv_usec - fpga_end.tv_usec));
-		printf("FPGA ALL:\t%d\n", (fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 + (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
-		printf("SW TIME:\t%d\n", (sw_start.tv_sec - sw_end.tv_sec) * 1000000 + (sw_start.tv_usec - sw_end.tv_usec));
+		
 	}
 	return error;
 }
