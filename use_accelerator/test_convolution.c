@@ -32,7 +32,7 @@ float in_matrix[SIZE+2][SIZE+2];
 float out_matrix[SIZE+2][SIZE+2];
 float dut_out_matrix[SIZE+2][SIZE+2];
 float kernel_static[CONV_SIZE][CONV_SIZE] = {{1.001, 13.88, 26.04}, {35.298, 0.005, 1.104}, {0.009, 95.007, 3.006}};
-int test_sizes[] = {14, 224, 112, 56, 28};
+int test_sizes[] = {224, 28, 14, 112, 56};
 
 struct timeval fpga_start, fpga_end, fpga_all_start, fpga_all_end, sw_start, sw_end;
 
@@ -60,55 +60,7 @@ void orig_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 	gettimeofday(&sw_end, NULL);
 	
 }
-/*
-void fpga_matrix_transfer(float src_matrix[SIZE+2][SIZE+2], unsigned int dst_address, unsigned char write) {
-	// WARNING: THIS METHOD ASSUMES THE DESTINATION OFFSET FOR MATRIX IS PAGE ALIGNED
-	// AND THAT ITS DIMENSIONS ARE (SIZE+2)X(SIZE+2)
-	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
-	unsigned int *fpga_address;
-	unsigned int page_addr = dst_address ;
-	unsigned int more_pages, length, remain_bytes = (SIZE+2) * (SIZE+2) * sizeof(float);
-	float * matrix_ptr = src_matrix;
-	printf("Open /dev/mem file\n");
-	if(fd == -1) {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return;
-    }
-	more_pages = remain_bytes / MAP_SIZE;
-	if ((remain_bytes % MAP_SIZE) != 0) {
-		more_pages+=1;
-	}
-	printf("Will transfer %d bytes in %d pages\n", remain_bytes, more_pages );
-	while(more_pages) {
-		fpga_address = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, page_addr);
-	    if (fpga_address == NULL) {
-			printf("mmap() returned null value\n");
-			return;
-		}
-		length = remain_bytes >= MAP_SIZE ? MAP_SIZE : remain_bytes;
-		printf("Transfering %d bytes to address 0x%x \n", length, page_addr );
-		if (write) {
-			// Write to FPGA
-			printf("memcpy from 0x%x to 0x%x \n", matrix_ptr, fpga_address );
-			memcpy(fpga_address, matrix_ptr, length);
-		}
-		else {
-			// Read
-			memcpy(matrix_ptr, fpga_address, length);
-		}
-		remain_bytes -= length; // Bytes remaining to send
-		more_pages--; // Pages remaining to write
-		page_addr += MAP_SIZE; // Go to next page
-		matrix_ptr += (length << 2); // Send next page of bytes
-		printf("Unmap page\n");
-		munmap(NULL, MAP_SIZE);
-	}
-	int temp = close(fd);
-    if(temp == -1) {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-    }
-}
-*/
+
 unsigned int dm( unsigned int target_addr){
 
 	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
@@ -146,7 +98,7 @@ unsigned int dm( unsigned int target_addr){
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(NULL, MAP_SIZE);
+	munmap(regs, MAP_SIZE);
 	return value;
 }
 
@@ -185,7 +137,7 @@ int pm(unsigned int target_addr, unsigned int value){
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(NULL, MAP_SIZE);
+	munmap(regs, MAP_SIZE);
 	return 0;
 }
 
@@ -226,7 +178,7 @@ float dm_float( unsigned int target_addr){
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(NULL, MAP_SIZE);
+	munmap(regs, MAP_SIZE);
 	return value;
 }
 
@@ -265,7 +217,7 @@ int pm_float(unsigned int target_addr, float value){
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(NULL, MAP_SIZE);
+	munmap(regs, MAP_SIZE);
 	return 0;
 }
 
@@ -298,18 +250,6 @@ void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 	}
 
 	// SET OTHER VARIABLES AND START ACCELERATOR (They are all in the same page)
-	/*int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
-	unsigned int *fpga_address;
-	printf("Open /dev/mem file\n");
-	if(fd == -1) {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return;
-    }
-    fpga_address = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, ACCELERATOR_ADDRESS);
-	if (fpga_address == NULL) {
-		printf("mmap() returned null value\n");
-		return;
-	}*/
 
     // SET SIZE
 	// printf("Copy size\n");
@@ -342,13 +282,6 @@ void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 	gettimeofday(&fpga_end, NULL);
 
 	// CLOSE FILES
-	/*
-	int temp = close(fd);
-    if(temp == -1) {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-    }
-	munmap(NULL, MAP_SIZE);
-	*/
 	// COPY OUTPUT MATRIX
 	// fpga_matrix_transfer(out, ACCELERATOR_ADDRESS + OUT_R_OFFSET, FPGA_MATRIX_READ);
 	matrix_address_in_fpga = ACCELERATOR_ADDRESS + OUT_R_OFFSET;
