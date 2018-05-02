@@ -12,6 +12,8 @@
 void convolution_2d(int shape_depth, float input[][SIZE + 2][SIZE + 2], float weights_kernel[][CONV_SIZE][CONV_SIZE],
 					float output[SIZE + 2][SIZE + 2], int size);
 
+// void fpga_set_matrix(float matrix[SIZE+2][SIZE+2], int size);
+// void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE]);
 void fpga_set_matrix_kernel(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], int size);
 void fpga_start();
 void fpga_poll();

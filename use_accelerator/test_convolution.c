@@ -30,7 +30,7 @@
 #define FPGA_MATRIX_WRITE	1
 
 
-float in_matrix[3][SIZE+2][SIZE+2];
+float in_matrix[IN_FRAMES_TO_TEST][SIZE+2][SIZE+2];
 float out_matrix[SIZE+2][SIZE+2];
 float dut_out_matrix[SIZE+2][SIZE+2];
 float kernel_static[CONV_SIZE][CONV_SIZE] = {{1.001, 13.88, 26.04}, {35.298, 0.005, 1.104}, {0.009, 95.007, 3.006}};
@@ -63,238 +63,31 @@ void orig_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 	
 }
 
-unsigned int dm( unsigned int target_addr){
-
-	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
-    volatile unsigned int *regs, *address ;
-    unsigned long offset, lp_cnt;
-    unsigned int value;
-
-	if(fd == -1)
-    {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return -1;
-    }
-
-	offset = 0;
-	lp_cnt = 1;
-
-	regs = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-    while( lp_cnt) {
-    	#ifdef LOG_DM
-        printf("0x%.4x" , (target_addr+offset));
-        #endif
-
-		address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-		value = *address;
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", value);              // display register value
-        #endif
-        lp_cnt -= 1;
-        offset  += 4; // WORD alligned
-    } // End while loop	
-	
-	int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(regs, MAP_SIZE);
-	return value;
-}
-
-int pm(unsigned int target_addr, unsigned int value){
-	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
-    volatile unsigned int *regs, *address ;
-	unsigned int offset = 0;
-	int lp_cnt = 1;
-	regs = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
-	
-	while (lp_cnt) {
-		#ifdef LOG_DM
-        printf("0x%.8x" , (target_addr + offset));
-        #endif
-        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-        *address = value;
-		// perform write command
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", *address);            // display register valuue
-        #endif
-		lp_cnt -= 1;
-        offset  += 4; //
-		// WORD alligned
-    } // End of while loop
-
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(regs, MAP_SIZE);
-	return 0;
-}
-
-float dm_float( unsigned int target_addr){
-
-	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
-    volatile float *regs, *address ;
-    unsigned long offset, lp_cnt;
-    float value;
-
-	if(fd == -1)
-    {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return -1;
-    }
-
-	offset = 0;
-	lp_cnt = 1;
-
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-    while( lp_cnt) {
-    	#ifdef LOG_DM
-        printf("0x%.4x" , (target_addr+offset));
-        #endif
-
-		address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-		value = *address;
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", value);              // display register value
-        #endif
-        lp_cnt -= 1;
-        offset  += 4; // WORD alligned
-    } // End while loop	
-	
-	int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(regs, MAP_SIZE);
-	return value;
-}
-
-int pm_float(unsigned int target_addr, float value){
-	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
-    volatile float *regs, *address ;
-	unsigned int offset = 0;
-	int lp_cnt = 1;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
-	
-	while (lp_cnt) {
-		#ifdef LOG_DM
-        printf("0x%.8x" , (target_addr + offset));
-        #endif
-        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-        *address = value;
-		// perform write command
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", *address);            // display register valuue
-        #endif
-		lp_cnt -= 1;
-        offset  += 4; //
-		// WORD alligned
-    } // End of while loop
-
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(regs, MAP_SIZE);
-	return 0;
-}
-
 void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
-	gettimeofday(&fpga_all_start, NULL);
+	
 	unsigned char i, j;
-	unsigned int matrix_address_in_fpga;
 	// FILL MATRIX
 	// printf("Copy matrix\n");
-	// fpga_matrix_transfer(matrix, ACCELERATOR_ADDRESS + MATRIX_OFFSET, FPGA_MATRIX_WRITE);
-	matrix_address_in_fpga = ACCELERATOR_ADDRESS + MATRIX_OFFSET;
-	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + MATRIX_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
-			pm_float(matrix_address_in_fpga, matrix[i][j]);
-		}
-	}
-	
-	// SET OUT MATRIX
-	// printf("Copy OUT\n");
-	// fpga_matrix_transfer(out, ACCELERATOR_ADDRESS + OUT_R_OFFSET, FPGA_MATRIX_WRITE);
-	matrix_address_in_fpga = ACCELERATOR_ADDRESS + OUT_R_OFFSET;
-	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			// printf("out[%d][%d]=0x%x ", i, j, out[i][j] );
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
-			pm_float(matrix_address_in_fpga, out[i][j]);
-		}
-		// printf("\n\n");
-	}
-
-	// SET OTHER VARIABLES AND START ACCELERATOR (They are all in the same page)
+	// fpga_set_matrix(matrix, size);
 
     // SET SIZE
 	// printf("Copy size\n");
-	//*(fpga_address + SIZE_OFFSET) = size;
-	pm(ACCELERATOR_ADDRESS + SIZE_OFFSET, size);
+	// fpga_set_size(size);
+
+	fpga_set_matrix_kernel(matrix, kernel, size);
 
 	// SET KERNEL
 	// printf("Copy kernel\n");
-	//memcpy(fpga_address + KERNEL_OFFSET, kernel, (CONV_SIZE)*(CONV_SIZE)*sizeof(float));
-	matrix_address_in_fpga = ACCELERATOR_ADDRESS + KERNEL_OFFSET;
-	for(i = 0; i < CONV_SIZE; i++) {
-		for(j = 0; j < CONV_SIZE; j++) {
-			pm_float(matrix_address_in_fpga, kernel[i][j]);
-			matrix_address_in_fpga += sizeof(float);
-		}
-	}
+	fpga_set_kernel(kernel);
 
 	// START ACCELLERATOR
 	// printf("Set ap_start bit\n");
-	// *fpga_address = 1;
 	gettimeofday(&fpga_start, NULL);
-	pm(ACCELERATOR_ADDRESS, 1);
+	fpga_start();
 
 	// POLL FOR DONE
-	unsigned int control_signals = dm(ACCELERATOR_ADDRESS);
-	while ((control_signals & 2) == 0) {
-		// printf("Poll for Done. Control Signals = 0x%x\n", control_signals);
-		control_signals = dm(ACCELERATOR_ADDRESS);
-	}
+	fpga_poll();
 	gettimeofday(&fpga_end, NULL);
-
-	// CLOSE FILES
-	// COPY OUTPUT MATRIX
-	// fpga_matrix_transfer(out, ACCELERATOR_ADDRESS + OUT_R_OFFSET, FPGA_MATRIX_READ);
-	matrix_address_in_fpga = ACCELERATOR_ADDRESS + OUT_R_OFFSET;
-	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));
-			out[i][j]=dm_float(matrix_address_in_fpga);
-			// printf("Address: 0x%x. Value: %f, Row: %d, Column: %d\n", matrix_address_in_fpga, out[i][j], i, j );
-		}
-	}
-	gettimeofday(&fpga_all_end, NULL);
 }
 
 void read_image(char *in_file) {
@@ -329,24 +122,30 @@ int main(int argc, char *argv[])
 	read_image(argv[1]);
 	for(i = 0; i < SIZES_TO_TEST; i++) {
 		size = test_sizes[i];
+		fpga_set_out_size(dut_out_matrix, size);
 		for (l = 0; l < IN_FRAMES_TO_TEST; l++) {
 			printf("Test Image Width: %d, Frame #: %d\n", size, l);
 			// Perform reference code
 			orig_convolution_3_x_3(in_matrix[l], kernel_static, out_matrix, size);
 			// Perform dut code
+			gettimeofday(&fpga_all_start, NULL);
+			// fpga_set_size(size);
 			fpga_convolution_3_x_3(in_matrix[l], kernel_static, dut_out_matrix, size);
-			for(j = 0; j <= (size+1); j++) {
-				for (k = 0; k <= (size+1); k++)
-				if (out_matrix[j][k] != dut_out_matrix[j][k]) {
-					// Error
-					printf("Error at row %d and column %d\n", j, k);
-					printf("Expected value %f actual value %f\n", out_matrix[j][k], dut_out_matrix[j][k]);
-					error++;
-				}
-			}
+			gettimeofday(&fpga_all_end, NULL);
 			printf("FPGA TIME:\t%d\n", (fpga_start.tv_sec - fpga_end.tv_sec) * 1000000 + (fpga_start.tv_usec - fpga_end.tv_usec));
 			printf("FPGA ALL:\t%d\n", (fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 + (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
 			printf("SW TIME:\t%d\n", (sw_start.tv_sec - sw_end.tv_sec) * 1000000 + (sw_start.tv_usec - sw_end.tv_usec));
+		}
+		// COPY OUTPUT MATRIX
+		fpga_read_out_r(dut_out_matrix, size);
+		for(j = 0; j <= (size+1); j++) {
+			for (k = 0; k <= (size+1); k++)
+			if (out_matrix[j][k] != dut_out_matrix[j][k]) {
+				// Error
+				printf("Error at row %d and column %d\n", j, k);
+				printf("Expected value %f actual value %f\n", out_matrix[j][k], dut_out_matrix[j][k]);
+				error++;
+			}
 		}
 	}
 	if (error > 0) {
