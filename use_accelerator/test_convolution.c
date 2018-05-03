@@ -78,6 +78,7 @@ void fpga_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE
 	// POLL FOR DONE
 	fpga_poll();
 	gettimeofday(&fpga_end_time, NULL);
+	gettimeofday(&fpga_all_end, NULL);
 }
 
 void read_image(char *in_file) {

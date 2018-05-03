@@ -209,9 +209,6 @@ int pm_float_row(unsigned int target_addr, float *value, int size){
 			lp_cnt -= 1;
 	        offset  += 4;
 			value++;
-			if (lp_cnt == 0) {
-				printf("Next address = 0x%.8x\n", (base_addr + offset));
-			}
 			//
 			// WORD alligned
 	    } // End of while loop
