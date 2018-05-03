@@ -289,6 +289,47 @@ int pm_square_matrix(unsigned int target_addr, float matrix[SIZE + 2][SIZE + 2],
 	return 0;
 }
 
+int dm_square_matrix(unsigned int target_addr, float matrix[SIZE + 2][SIZE + 2], int size){	
+	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+    volatile float *regs, *address ;
+	unsigned int offset;
+	unsigned int base_addr = target_addr & ~MAP_MASK;
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+	unsigned int i, j, page_count, actual_page;
+    if(fd == -1)
+    {
+        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
+		return -1;
+    }
+    actual_page = page_count = 0;
+    for(i = 0; i < size; i++) {
+    	for (j = 0; j < size; j++) {
+    		offset = i * (SIZE + 2) * sizeof(float) + j * sizeof(float);
+    		actual_page = offset / MAP_SIZE;
+    		// if ( !((i == 0) && (j == 0)) && ((offset & MAP_MASK) == 0)) {
+    		if (page_count < actual_page) {
+    			// This is not the first element and offset is multiple of MAP_SIZE,
+    			// need to create a new page
+    			page_count++;
+    			munmap(regs, MAP_SIZE);
+				base_addr += MAP_SIZE;
+				regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+    		}
+    		address = regs + (( offset & MAP_MASK)>>2);
+	        matrix[i][j] = *address; 
+    	}
+    }
+
+    int temp = close(fd);
+    if(temp == -1)
+    {
+        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
+        return -1;
+    }
+	munmap(regs, MAP_SIZE);
+	return 0;
+}
+
 // TODO: Should I create separate methods?
 void fpga_set_matrix(float matrix[SIZE+2][SIZE+2], int size) {
 	pm_square_matrix(ACCELERATOR_ADDRESS + MATRIX_OFFSET, matrix, size+2);
@@ -330,10 +371,6 @@ void fpga_read_out_r(float out[SIZE+2][SIZE+2], int size) {
 	int i, j;
 	unsigned int matrix_address_in_fpga;
 	// OUT_R
-	for(i=0; i < (size+2); i++) {
-		for(j=0; j < (size+2); j++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + OUT_R_OFFSET) + (i * (SIZE+2) * sizeof(float) + j * sizeof(float));;
-			out[i][j] = dm_float(matrix_address_in_fpga);
-		}
-	}	
+	dm_square_matrix(ACCELERATOR_ADDRESS + OUT_R_OFFSET, out, size+2);
+	
 }
