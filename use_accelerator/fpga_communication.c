@@ -336,14 +336,32 @@ void fpga_set_matrix(float matrix[SIZE+2][SIZE+2], int size) {
 }
 
 void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE]) {
-	int i, j;
-	unsigned int matrix_address_in_fpga;
-	// KERNEL
-	matrix_address_in_fpga = ACCELERATOR_ADDRESS + KERNEL_OFFSET;
-	for(i=0; i < CONV_SIZE; i++) {
-			matrix_address_in_fpga = (ACCELERATOR_ADDRESS + KERNEL_OFFSET) + (i * (CONV_SIZE) * sizeof(float));
-			pm_float_row(matrix_address_in_fpga, kernel[i], CONV_SIZE);
-	}
+	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+    volatile float *regs, *address ;
+	unsigned int offset = KERNEL_OFFSET;
+	unsigned int base_addr = ACCELERATOR_ADDRESS;
+    if(fd == -1)
+    {
+        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
+		return -1;
+    }
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+    for(i = 0; i < 3; i++) {
+    	for (j = 0; j < 3; j++) {
+    		address = regs + (( offset & MAP_MASK)>>2);
+	        *address = kernel[i][j];
+	        offset += 4;
+    	}
+    }
+
+    int temp = close(fd);
+    if(temp == -1)
+    {
+        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
+        return -1;
+    }
+	munmap(regs, MAP_SIZE);
+	return 0;
 }
 
 void fpga_set_out_size(float out[SIZE+2][SIZE+2], int size) {
