@@ -182,21 +182,53 @@ int pm_float(unsigned int target_addr, float value){
 int pm_float_row(unsigned int target_addr, float *value, int size){	
 	int fd = open("/dev/mem", O_RDWR|O_SYNC);
     volatile float *regs, *address ;
-	unsigned int offset = 0;
+	unsigned int offset = target_addr & MAP_MASK;
+	unsigned int base_addr = target_addr & ~MAP_MASK;
 	int lp_cnt = size;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
 
     if(fd == -1)
     {
         printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
 		return -1;
     }
-	
+	if ((size * sizeof(float)) > (MAP_SIZE - offset)) {
+		// printf("Target Address = %.8x, Base Address = 0x%.8x, Offset = 0x%.8x, Size = %d\n", target_addr, base_addr, offset, size);
+		lp_cnt = (MAP_SIZE - offset) / sizeof(float);
+		// printf("lp_cnt = %d, MAP_SIZE - offset = %d\n",lp_cnt, MAP_SIZE - offset );
+		while (lp_cnt) {
+			#ifdef LOG_DM
+	        printf("0x%.8x" , (base_addr + offset));
+	        #endif
+	        address = regs + (((base_addr+ offset) & MAP_MASK)>>2);
+	        *address = *value;
+			// perform write command
+			#ifdef LOG_DM
+	        printf(" = 0x%.8x\n", *address);            // display register valuue
+	        #endif
+			lp_cnt -= 1;
+	        offset  += 4;
+			value++;
+			if (lp_cnt == 0) {
+				printf("Next address = 0x%.8x\n", (base_addr + offset));
+			}
+			//
+			// WORD alligned
+	    } // End of while loop
+		munmap(regs, MAP_SIZE);
+		base_addr += MAP_SIZE;
+		regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+		lp_cnt = size - ((MAP_SIZE - offset) / sizeof(float));
+		offset = 0;
+		// printf("Target Address = %.8x, Base Address = 0x%.8x, Offset = 0x%.8x, Size = %d\n", target_addr, base_addr, offset, size);
+		// printf("lp_cnt = %d\n", lp_cnt);
+
+	}
 	while (lp_cnt) {
 		#ifdef LOG_DM
-        printf("0x%.8x" , (target_addr + offset));
+        printf("0x%.8x" , (base_addr + offset));
         #endif
-        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
+        address = regs + (((base_addr + offset) & MAP_MASK)>>2);
         *address = *value;
 		// perform write command
 		#ifdef LOG_DM
