@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 	unsigned int error = 0;
 	int size;
 	read_image(argv[1]);
+	pmdm_open();
 	for(i = 0; i < SIZES_TO_TEST; i++) {
 		size = test_sizes[i];
 		fpga_set_out_size(dut_out_matrix, size);
@@ -137,6 +138,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	pmdm_close();
 	if (error > 0) {
 		printf("ERROR: TEST FAILED\n");
 	}

@@ -19,23 +19,19 @@
 #define MATRIX_OFFSET		0x40000
 #define OUT_R_OFFSET		0x80000
 
+int fpga_fd;
+
 unsigned int dm( unsigned int target_addr){
 
-	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
     volatile unsigned int *regs, *address ;
     unsigned long offset, lp_cnt;
     unsigned int value;
 
-	if(fd == -1)
-    {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return -1;
-    }
 
 	offset = 0;
 	lp_cnt = 1;
 
-	regs = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
+	regs = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, target_addr & ~MAP_MASK);
     while( lp_cnt) {
     	#ifdef LOG_DM
         printf("0x%.4x" , (target_addr+offset));
@@ -50,29 +46,16 @@ unsigned int dm( unsigned int target_addr){
         offset  += 4; // WORD alligned
     } // End while loop	
 	
-	int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
 	munmap(regs, MAP_SIZE);
 	return value;
 }
 
 int pm(unsigned int target_addr, unsigned int value){
 	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
     volatile unsigned int *regs, *address ;
 	unsigned int offset = 0;
 	int lp_cnt = 1;
-	regs = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
+	regs = (unsigned int *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, target_addr & ~MAP_MASK);
 	
 	while (lp_cnt) {
 		#ifdef LOG_DM
@@ -89,109 +72,42 @@ int pm(unsigned int target_addr, unsigned int value){
 		// WORD alligned
     } // End of while loop
 
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
 	munmap(regs, MAP_SIZE);
 	return 0;
 }
 
-float dm_float( unsigned int target_addr){
-
-	int fd = open("/dev/mem", O_RDWR|O_SYNC, S_IRUSR);
-    volatile float *regs, *address ;
-    unsigned long offset, lp_cnt;
-    float value;
-
-	if(fd == -1)
-    {
-		printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-        return -1;
-    }
-
-	offset = 0;
-	lp_cnt = 1;
-
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-    while( lp_cnt) {
-    	#ifdef LOG_DM
-        printf("0x%.4x" , (target_addr+offset));
-        #endif
-
-		address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-		value = *address;
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", value);              // display register value
-        #endif
-        lp_cnt -= 1;
-        offset  += 4; // WORD alligned
-    } // End while loop	
+int pmdm_open(void){
 	
-	int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
-	munmap(regs, MAP_SIZE);
-	return value;
-}
+	fpga_fd = open("/dev/mem", O_RDWR|O_SYNC);
 
-int pm_float(unsigned int target_addr, float value){
-	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
-    volatile float *regs, *address ;
-	unsigned int offset = 0;
-	int lp_cnt = 1;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, target_addr & ~MAP_MASK);
-
-    if(fd == -1)
+    if(fpga_fd == -1)
     {
         printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
 		return -1;
     }
 	
-	while (lp_cnt) {
-		#ifdef LOG_DM
-        printf("0x%.8x" , (target_addr + offset));
-        #endif
-        address = regs + (((target_addr+ offset) & MAP_MASK)>>2);
-        *address = value;
-		// perform write command
-		#ifdef LOG_DM
-        printf(" = 0x%.8x\n", *address);            // display register valuue
-        #endif
-		lp_cnt -= 1;
-        offset  += 4; //
-		// WORD alligned
-    } // End of while loop
+	return 0;
+}
 
-    int temp = close(fd);
+int pmdm_close(void){
+
+    int temp = close(fpga_fd);
     if(temp == -1)
     {
         printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
         return -1;
     }
-	munmap(regs, MAP_SIZE);
 	return 0;
 }
+
 
 int pm_float_row(unsigned int target_addr, float *value, int size){	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
     volatile float *regs, *address ;
 	unsigned int offset = target_addr & MAP_MASK;
 	unsigned int base_addr = target_addr & ~MAP_MASK;
 	int lp_cnt = size;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
 
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
 	if ((size * sizeof(float)) > (MAP_SIZE - offset)) {
 		// printf("Target Address = %.8x, Base Address = 0x%.8x, Offset = 0x%.8x, Size = %d\n", target_addr, base_addr, offset, size);
 		lp_cnt = (MAP_SIZE - offset) / sizeof(float);
@@ -214,7 +130,7 @@ int pm_float_row(unsigned int target_addr, float *value, int size){
 	    } // End of while loop
 		munmap(regs, MAP_SIZE);
 		base_addr += MAP_SIZE;
-		regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+		regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
 		lp_cnt = size - ((MAP_SIZE - offset) / sizeof(float));
 		offset = 0;
 		// printf("Target Address = %.8x, Base Address = 0x%.8x, Offset = 0x%.8x, Size = %d\n", target_addr, base_addr, offset, size);
@@ -238,28 +154,18 @@ int pm_float_row(unsigned int target_addr, float *value, int size){
 		// WORD alligned
     } // End of while loop
 
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
 	munmap(regs, MAP_SIZE);
 	return 0;
 }
 
 int pm_square_matrix(unsigned int target_addr, float matrix[SIZE + 2][SIZE + 2], int size){	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+
     volatile float *regs, *address ;
 	unsigned int offset;
 	unsigned int base_addr = target_addr & ~MAP_MASK;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
 	unsigned int i, j, page_count, actual_page;
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
+
     actual_page = page_count = 0;
     for(i = 0; i < size; i++) {
     	for (j = 0; j < size; j++) {
@@ -272,35 +178,25 @@ int pm_square_matrix(unsigned int target_addr, float matrix[SIZE + 2][SIZE + 2],
     			page_count++;
     			munmap(regs, MAP_SIZE);
 				base_addr += MAP_SIZE;
-				regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+				regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
     		}
     		address = regs + (( offset & MAP_MASK)>>2);
 	        *address = matrix[i][j];
     	}
     }
 
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
 	munmap(regs, MAP_SIZE);
 	return 0;
 }
 
 int dm_square_matrix(unsigned int target_addr, float matrix[SIZE + 2][SIZE + 2], int size){	
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+
     volatile float *regs, *address ;
 	unsigned int offset;
 	unsigned int base_addr = target_addr & ~MAP_MASK;
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
 	unsigned int i, j, page_count, actual_page;
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
+
     actual_page = page_count = 0;
     for(i = 0; i < size; i++) {
     	for (j = 0; j < size; j++) {
@@ -313,19 +209,13 @@ int dm_square_matrix(unsigned int target_addr, float matrix[SIZE + 2][SIZE + 2],
     			page_count++;
     			munmap(regs, MAP_SIZE);
 				base_addr += MAP_SIZE;
-				regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+				regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
     		}
     		address = regs + (( offset & MAP_MASK)>>2);
 	        matrix[i][j] = *address; 
     	}
     }
 
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
 	munmap(regs, MAP_SIZE);
 	return 0;
 }
@@ -336,16 +226,13 @@ void fpga_set_matrix(float matrix[SIZE+2][SIZE+2], int size) {
 }
 
 void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE]) {
-	int fd = open("/dev/mem", O_RDWR|O_SYNC);
+
     volatile float *regs, *address ;
 	unsigned int offset = KERNEL_OFFSET;
 	unsigned int base_addr = ACCELERATOR_ADDRESS;
-    if(fd == -1)
-    {
-        printf("Unable to open /dev/mem.  Ensure it exists (major=1, minnor=1)\n");
-		return -1;
-    }
-	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, base_addr);
+	unsigned int i, j;
+
+	regs = (float *)mmap(NULL, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fpga_fd, base_addr);
     for(i = 0; i < 3; i++) {
     	for (j = 0; j < 3; j++) {
     		address = regs + (( offset & MAP_MASK)>>2);
@@ -354,12 +241,6 @@ void fpga_set_kernel(float kernel[CONV_SIZE][CONV_SIZE]) {
     	}
     }
 
-    int temp = close(fd);
-    if(temp == -1)
-    {
-        printf("Unable to close /dev/mem.  Ensure it exists (major=1, miinor=1)\n");
-        return -1;
-    }
 	munmap(regs, MAP_SIZE);
 	return 0;
 }
