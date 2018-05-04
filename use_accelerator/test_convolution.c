@@ -29,9 +29,11 @@ float in_matrix[IN_FRAMES_TO_TEST][SIZE+2][SIZE+2];
 float out_matrix[SIZE+2][SIZE+2];
 float dut_out_matrix[SIZE+2][SIZE+2];
 float kernel_static[CONV_SIZE][CONV_SIZE] = {{1.001, 13.88, 26.04}, {35.298, 0.005, 1.104}, {0.009, 95.007, 3.006}};
-int test_sizes[] = {224, 28, 14, 112, 56};
+int test_sizes[] = {224, 112, 64, 28, 14};
 
-struct timeval fpga_start_time, fpga_end_time, fpga_all_start, fpga_all_end, sw_start, sw_end;
+struct timeval fpga_start_time, fpga_end_time, fpga_all_start, fpga_all_end, sw_start, sw_end, fpga_write_start, fpga_write_end,
+fpga_read_start, fpga_read_end;
+long int fpga_total, software_total, fpga_only_total;
 
 void orig_convolution_3_x_3(float matrix[SIZE+2][SIZE+2], float kernel[CONV_SIZE][CONV_SIZE], float out[SIZE+2][SIZE+2], int size) {
 	gettimeofday(&sw_start, NULL);
@@ -114,20 +116,33 @@ int main(int argc, char *argv[])
 	pmdm_open();
 	for(i = 0; i < SIZES_TO_TEST; i++) {
 		size = test_sizes[i];
+		gettimeofday(&fpga_write_start, NULL);
 		fpga_set_out_size(dut_out_matrix, size);
+		gettimeofday(&fpga_write_end, NULL);
 		for (l = 0; l < IN_FRAMES_TO_TEST; l++) {
-			printf("Test Image Width: %d, Frame #: %d\n", size, l);
+			// printf("Test Image Width: %d, Frame #: %d\n", size, l);
 			// Perform reference code
 			orig_convolution_3_x_3(in_matrix[l], kernel_static, out_matrix, size);
 			// Perform dut code
 			// fpga_set_size(size);
+
 			fpga_convolution_3_x_3(in_matrix[l], kernel_static, dut_out_matrix, size);
-			printf("FPGA TIME:\t%d\n", (fpga_start_time.tv_sec - fpga_end_time.tv_sec) * 1000000 + (fpga_start_time.tv_usec - fpga_end_time.tv_usec));
-			printf("FPGA ALL:\t%d\n", (fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 + (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
-			printf("SW TIME:\t%d\n", (sw_start.tv_sec - sw_end.tv_sec) * 1000000 + (sw_start.tv_usec - sw_end.tv_usec));
+			// printf("FPGA TIME:\t%d\n", 0-(fpga_start_time.tv_sec - fpga_end_time.tv_sec) * 1000000 - (fpga_start_time.tv_usec - fpga_end_time.tv_usec));
+			// printf("FPGA ALL:\t%d\n", 0-(fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 - (fpga_all_start.tv_usec - fpga_all_end.tv_usec));
+			// printf("SW TIME:\t%d\n", 0-(sw_start.tv_sec - sw_end.tv_sec) * 1000000 - (sw_start.tv_usec - sw_end.tv_usec));
+			software_total += 0-(sw_start.tv_sec - sw_end.tv_sec) * 1000000 - (sw_start.tv_usec - sw_end.tv_usec);
+			fpga_total += 0-(fpga_all_start.tv_sec - fpga_all_end.tv_sec) * 1000000 - (fpga_all_start.tv_usec - fpga_all_end.tv_usec);
+			fpga_only_total += 0-(fpga_start_time.tv_sec - fpga_end_time.tv_sec) * 1000000 - (fpga_start_time.tv_usec - fpga_end_time.tv_usec);
 		}
 		// COPY OUTPUT MATRIX
+		gettimeofday(&fpga_read_start, NULL);
 		fpga_read_out_r(dut_out_matrix, size);
+		gettimeofday(&fpga_read_end, NULL);
+		fpga_total += (fpga_write_end.tv_sec - fpga_write_start.tv_sec) * 1000000 + (fpga_write_end.tv_usec - fpga_write_start.tv_usec);
+		fpga_total += (fpga_read_end.tv_sec - fpga_read_start.tv_sec) * 1000000 + (fpga_read_end.tv_usec - fpga_read_start.tv_usec);
+		// printf("FPGA WRITE OUT:\t%d\n", (fpga_write_end.tv_sec - fpga_write_start.tv_sec) * 1000000 + (fpga_write_end.tv_usec - fpga_write_start.tv_usec));
+		// printf("FPGA READ_OUT:\t%d\n", (fpga_read_end.tv_sec - fpga_read_start.tv_sec) * 1000000 + (fpga_read_end.tv_usec - fpga_read_start.tv_usec));
+		printf("1to%d, %dx%d, %d, %d, %d\n", IN_FRAMES_TO_TEST, size, size, software_total, fpga_only_total, fpga_total );
 		for(j = 0; j <= (size+1); j++) {
 			for (k = 0; k <= (size+1); k++)
 			if (out_matrix[j][k] != dut_out_matrix[j][k]) {
